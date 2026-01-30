@@ -1,13 +1,29 @@
 const sqlite3 = require('sqlite3').verbose();
+const { resolve } = require('dns');
 const { promisify } = require('util');
 
 //create/open db
 const db = new sqlite3.Database('projects.db')
 
 //wrapping methods into promises
-const dbRun = promisify(db.run.bind(db));
+function dbRun(sql, params = []) {
+    return new Promise((resolve, reject) => {
+        db.run(sql, params, function(err) {
+            if (err) {
+                reject(err);
+            }
+            else {
+                resolve({
+                    lastID: this.lastID,
+                    changes: this.changes
+                });
+            }
+        });
+    });
+}
+
 const dbGet = promisify(db.get.bind(db));
-const dbAll = promisify(db.get.all(db));
+const dbAll = promisify(db.all.bind(db));
 
 //db initialization
 async function initDatabase() {
