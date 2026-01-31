@@ -38,9 +38,59 @@ async function initDatabase() {
     console.log('Database initialization completed successfully');
 }
 
+async function getOrCreateProject(projectName) {
+    try {
+        //fetching existing project
+        let project = await dbGet(
+            'SELECT * FROM projects WHERE project_name = ?',
+            [projectName]
+        );
+
+        if (!project) {
+            await dbRun(
+                'INSERT INTO projects (project_name, last_number) VALUES (?, ?)',
+                [projectName, 0]
+            );
+
+            project = await dbGet(
+                'SELECT * FROM projects WHERE project_name = ?',
+                [projectName]
+            );
+        }
+
+        return project;
+    } catch (error) {
+        console.error('getOrCreateProject failed:', error.message);
+        throw error;
+    }
+}
+
+async function incrementProjectCounter(projectName) {
+    try {
+        //making sure the project exists in the DB
+        await getOrCreateProject(projectName);
+
+        //increasing the last_number
+        await dbRun(
+            'UPDATE projects SET last_number = last_number + 1 WHERE project_name = ?',
+            [projectName]
+        );
+
+        //getting the updated value
+        const project = await getOrCreateProject(projectName);
+
+        return project.last_number;
+    } catch (error) {
+        console.error('incrementProjectCounter failed:', error.message);
+        throw error;
+    } 
+}
+
 module.exports = {
    initDatabase,
    dbRun,
    dbGet,
-   dbAll 
+   dbAll,
+   getOrCreateProject,
+   incrementProjectCounter 
 }
