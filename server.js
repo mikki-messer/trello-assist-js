@@ -2,7 +2,8 @@ require('dotenv').config();
 const express = require('express');
 const app = express();
 const { incrementProjectCounter } = require('./db');
-const { getProjectNameFromIdValue } = require('./trello-utils');
+const { getProjectNameFromIdValue, updateCardTitle } = require('./trello-utils');
+const { formatCardTitle } = require('./utils');
 
 const CUSTOM_FIELD_NAME = process.env.TRELLO_CUSTOM_FIELD_NAME;
 const EVENT_TYPE = process.env.TRELLO_EVENT_TYPE;
@@ -49,12 +50,20 @@ app.post(WEBHOOK_PATH, async (req, res) => {
                     //increasing counter
                     const newNumber = await incrementProjectCounter(projectName);
                     console.log(`New number for ${projectName}:`, newNumber);
+
+                    //format new card title
+                    const newTitle = formatCardTitle(projectName, newNumber, card.name);
+                    console.log('New title:', newTitle);
+
+                    //updating card title in Trello
+                    await updateCardTitle(card.id, newTitle);
+
+                    console.log(`Card ${card.id} updated successfully`);
                 }
                 
             }
         } catch (error) {
             console.error('Error processing webhook:', error.message);
-            //TODO: update card name
         }
     }
 

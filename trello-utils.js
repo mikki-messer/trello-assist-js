@@ -4,6 +4,7 @@ require('dotenv').config();
 const API_KEY = process.env.TRELLO_API_KEY;
 const TOKEN = process.env.TRELLO_TOKEN;
 const CUSTOM_FIELDS_URL = process.env.TRELLO_CUSTOM_FIELDS_URL;
+const CARDS_URL = process.env.TRELLO_CARDS_URL;
 
 //cache for keeping customFieldOptions
 let customFieldOptionsCache = {};
@@ -44,6 +45,29 @@ async function getProjectNameFromIdValue(customFieldId, idValue) {
     return options[idValue] || null;
 }
 
+async function updateCardTitle(cardId, newTitle) {
+    try {
+        const response = await axios.put(
+            `${CARDS_URL}${cardId}`,
+            null,
+            {
+                params: {
+                    key: API_KEY,
+                    token: TOKEN,
+                    name: newTitle
+                }
+            }
+        );
+
+        console.log(`Card title updated: ${newTitle}`);
+        return response.data;
+
+    } catch (error) {
+        console.error(`Error updating card ${cardId} title:`, newTitle);
+        throw error;
+    }
+}
 module.exports = {
-    getProjectNameFromIdValue
+    getProjectNameFromIdValue,
+    updateCardTitle
 };
