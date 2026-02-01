@@ -4,7 +4,7 @@ const axios = require('axios');
 const API_KEY = process.env.TRELLO_API_KEY;
 const TOKEN = process.env.TRELLO_TOKEN;
 
-// ID webhook который ты получил
+// Existing webhook ID
 const WEBHOOK_ID = 'webhookId';
 
 async function deleteWebhook() {
@@ -14,10 +14,10 @@ async function deleteWebhook() {
             { params: { key: API_KEY, token: TOKEN } }
         );
 
-        console.log('✅ Webhook удалён!');
+        console.log('Webhook deleted!');
         
     } catch (error) {
-        console.error('❌ Ошибка:', error.message);
+        console.error('Error:', error.message);
     }
 }
 

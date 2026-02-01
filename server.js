@@ -4,41 +4,41 @@ const app = express();
 const { incrementProjectCounter } = require('./db');
 const { getProjectNameFromIdValue } = require('./trello-utils');
 
-const TRELLO_CUSTOM_FIELD_NAME = process.env.TRELLO_CUSTOM_FIELD_NAME;
-const TRELLO_EVENT_TYPE = process.env.TRELLO_EVENT_TYPE;
+const CUSTOM_FIELD_NAME = process.env.TRELLO_CUSTOM_FIELD_NAME;
+const EVENT_TYPE = process.env.TRELLO_EVENT_TYPE;
+const WEBHOOK_PATH = process.env.APP_WEBHOOK_PATH;
 
 //Middleware for the JSON parsing
 app.use(express.json());
 
 //HEAD endpoint for Trello-checkup
-app.head('/webhook', (req, res) => {
+app.head(WEBHOOK_PATH, (req, res) => {
     res.status(200).end();
 })
 
 //GET endpoint for browser checkup
-app.get('/webhook', (req, res) => {
+app.get(WEBHOOK_PATH, (req, res) => {
     res.status(200).send('Server is alive! Use POST to send data.');
 })
 
 //Endpoint for the Trello webhooks
-app.post('/webhook', async (req, res) => {
+app.post(WEBHOOK_PATH, async (req, res) => {
     console.log('Webhook received!');
 
     const eventType = req.body.action.type;
     console.log('Event type:', eventType);
 
-    
-    if (eventType === TRELLO_EVENT_TYPE) {
+    if (eventType === EVENT_TYPE) {
         try {
-            let customField = req.body.action.data.customField;
-            let customFieldItem = req.body.action.data.customFieldItem;
-            let card = req.body.action.data.card;
+            const customField = req.body.action.data.customField;
+            const customFieldItem = req.body.action.data.customFieldItem;
+            const card = req.body.action.data.card;
 
-            if (customField.name === TRELLO_CUSTOM_FIELD_NAME) {
+            if (customField.name === CUSTOM_FIELD_NAME) {
                 console.log(`Project field changed!`);
                 console.log(`Card name:`, card.name);
 
-                let projectName = await getProjectNameFromIdValue(
+                const projectName = await getProjectNameFromIdValue(
                     customField.id, 
                     customFieldItem.idValue);
 
@@ -47,7 +47,7 @@ app.post('/webhook', async (req, res) => {
 
                 if (projectName) {
                     //increasing counter
-                    let newNumber = await incrementProjectCounter(projectName);
+                    const newNumber = await incrementProjectCounter(projectName);
                     console.log(`New number for ${projectName}:`, newNumber);
                 }
                 
