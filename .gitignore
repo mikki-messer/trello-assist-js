@@ -2,6 +2,7 @@ node_modules/
 .env
 *.db
 trello-response.json
+trello-response-webhook.json
 # macOS
 .DS_Store
 .DS_Store?
