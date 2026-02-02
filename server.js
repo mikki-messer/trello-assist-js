@@ -4,6 +4,7 @@ const app = express();
 const { incrementProjectCounter } = require('./db');
 const { getProjectNameFromIdValue, updateCardTitle } = require('./trello-utils');
 const { formatCardTitle } = require('./utils');
+const { validateHMAC } = require('./middleware/hmac-validation.js');
 
 const CUSTOM_FIELD_NAME = process.env.TRELLO_CUSTOM_FIELD_NAME;
 const EVENT_TYPE = process.env.TRELLO_EVENT_TYPE;
@@ -23,7 +24,7 @@ app.get(WEBHOOK_PATH, (req, res) => {
 })
 
 //Endpoint for the Trello webhooks
-app.post(WEBHOOK_PATH, async (req, res) => {
+app.post(WEBHOOK_PATH, validateHMAC, async (req, res) => {
     console.log('Webhook received!');
 
     const eventType = req.body.action.type;
