@@ -10,8 +10,6 @@ const CALLBACK_URL = process.env.CALLBACK_URL;
 //APP webhook path
 const WEBHOOK_PATH = process.env.APP_WEBHOOK_PATH;
 
-//board ID
-const BOARD_ID = process.env.BOARD_ID;
 const TRELLO_REGISTER_WH_URL = process.env.TRELLO_REGISTER_WH_URL;
 
 async function registerWebhook(boardId, description) {

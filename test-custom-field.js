@@ -3,13 +3,12 @@ const axios = require('axios');
 
 const API_KEY = process.env.TRELLO_API_KEY;
 const TOKEN = process.env.TRELLO_TOKEN;
-const CUSTOM_FIELD_ID = process.env.TRELLO_CUSTOM_FIELD_ID;
 const CUSTOM_FIELDS_URL = process.env.TRELLO_CUSTOM_FIELDS_URL
 
-async function getCustomFieldOptions() {
+async function getCustomFieldOptions(customFieldId) {
     try {
         const response = await axios.get(
-            CUSTOM_FIELDS_URL.concat(CUSTOM_FIELD_ID),
+            CUSTOM_FIELDS_URL.concat(customFieldId),
             { params: { key: API_KEY, token: TOKEN } }
         );
 
@@ -21,4 +20,7 @@ async function getCustomFieldOptions() {
     }
 }
 
-getCustomFieldOptions();
+//run command: node test-custom-field.js fieldId
+const CUSTOM_FIELD_ID = process.argv[2];
+
+getCustomFieldOptions(CUSTOM_FIELD_ID);
