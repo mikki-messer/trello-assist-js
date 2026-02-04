@@ -1,11 +1,13 @@
 require('dotenv').config();
 const express = require('express');
 
+const logger = require('./logger');
 const { incrementProjectCounter } = require('./db');
 const { getProjectNameFromIdValue, updateCardTitle } = require('./trello-utils');
 const { formatCardTitle } = require('./utils');
 const { validateHMAC } = require('./middleware/hmac-validation');
-const { isBoardRegistered, getBoardDescription } = require('./config/boards')
+const { isBoardRegistered, getBoardDescription, getAllBoards } = require('./config/boards');
+const { log } = require('winston');
 
 const app = express();
 
@@ -28,23 +30,29 @@ app.get(WEBHOOK_PATH, (req, res) => {
 
 //Endpoint for the Trello webhooks
 app.post(WEBHOOK_PATH, validateHMAC, async (req, res) => {
-    console.log('Webhook received!');
+    const eventType = req.body.action?.type;
+    const boardId = req.body.model?.id;
+    const boardName = req.body.model?.name;
 
-    const eventType = req.body.action.type;
-    const boardId = req.body.model.id;
-    const boardName = req.body.model.name;
-
-    console.log('Event type:', eventType);
-    console.log('Board ID:', boardId);
-    console.log('Board Name:', boardName);
+    logger.info('Webhook received!', {
+        eventType,
+        boardId,
+        boardName
+    });
 
     if (!isBoardRegistered(boardId)) {
-        console.warn(`Webhook from unregistered board ${boardId} ${boardName}`);
-        console.warn('Add it to config/boards.js to enable it');
+        logger.warn('Webhook from unregistered board - ignored, add it to config/boards.js to enable it', {
+            boardId,
+            boardName,
+            registeredBoards: getAllBoards()
+        }); 
         return res.status(200).send('OK'); //200 to keep the endpoint alive
     }
 
-    console.log (`Webhook from registered board ${getBoardDescription(boardId)}`)
+    logger.info('Webhook from registered board', {
+         boardId,
+         description: getBoardDescription(boardId)
+    });
 
     if (eventType === EVENT_TYPE) {
         try {
@@ -53,34 +61,45 @@ app.post(WEBHOOK_PATH, validateHMAC, async (req, res) => {
             const card = req.body.action.data.card;
 
             if (customField.name === CUSTOM_FIELD_NAME) {
-                console.log(`Project field changed!`);
-                console.log(`Card name:`, card.name);
+                logger.info('Project field changed!', { 
+                    cardId: card.id,
+                    cardName: card.name 
+                });
 
                 const projectName = await getProjectNameFromIdValue(
                     customField.id, 
                     customFieldItem.idValue);
 
-                //TODO: Get project name
-                console.log('idValue:', projectName);
-
                 if (projectName) {
+                    logger.info('Project resolved', { projectName });
+
                     //increasing counter
                     const newNumber = await incrementProjectCounter(projectName);
-                    console.log(`New number for ${projectName}:`, newNumber);
+                    logger.info('Counter incremented', { 
+                        projectName, 
+                        newNumber });
 
                     //format new card title
                     const newTitle = formatCardTitle(projectName, newNumber, card.name);
-                    console.log('New title:', newTitle);
 
                     //updating card title in Trello
                     await updateCardTitle(card.id, newTitle);
 
-                    console.log(`Card ${card.id} updated successfully`);
+                    logger.info('Card updated successfully', {
+                        cardId: card.id,
+                        oldTitle: card.name,
+                        newTitle
+                    });
                 }
                 
             }
         } catch (error) {
-            console.error('Error processing webhook:', error.message);
+            logger.error('Error processing webhook:', {
+                error: error.message,
+                stack: error.stack,
+                eventType,
+                boardId 
+            });
         }
     }
 
@@ -110,8 +129,12 @@ app.get(process.env.APP_HEALTHCHECK_PATH, async(req, res) => {
             db: 'connected',
             boards_registered: getBoardCount()
         });
+
     } catch (error) {
-        console.error('Health check failed:', error.message);
+        logger.error('Health check failed:', { 
+            message: error.message
+         });
+
         res.status(503).json({
             status: 'unhealthy',
             error: error.message,
@@ -132,5 +155,8 @@ app.head(process.env.APP_HEALTHCHECK_PATH, async(req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    logger.info('Server launched', {
+         port: PORT,
+         environment: process.env.NODE_ENV
+    });
 });

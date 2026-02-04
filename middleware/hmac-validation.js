@@ -1,4 +1,6 @@
 const crypto = require('crypto');
+const logger = require('../logger');
+
 require('dotenv').config();
 
 function validateHMAC(req, res, next) {
@@ -10,7 +12,7 @@ function validateHMAC(req, res, next) {
 
         //no signature = 401
         if (!receivedSignature) {
-            console.error(`Missing ${SIGNATURE_HEADER_FIELD} header`);
+            logger.error(`Missing ${SIGNATURE_HEADER_FIELD} header`);
             return res.status(401).send('Unauthorized: missing signature');
         }
 
@@ -18,12 +20,12 @@ function validateHMAC(req, res, next) {
         const SECRET = process.env.TRELLO_SECRET;
 
         if (!SECRET) {
-            console.error('Trello secret not configured');
+            logger.error('Trello secret not configured');
             return res.status(500).send('Server Configuration Error');
         }
 
         if (!CALLBACK_URL) {
-            console.error('Callback URL not configured');
+            logger.error('Callback url not configured');
             return res.status(500).send('Server Configuration Error');
         }
 
@@ -36,18 +38,23 @@ function validateHMAC(req, res, next) {
         const generatedSignature = hmac.digest(process.env.HMAC_SIGNATURE_ENCODING);
 
         if (generatedSignature !== receivedSignature) {
-            console.error('Invalid HMAC signature');
-            console.error('Expected:', generatedSignature);
-            console.error('Received:', receivedSignature);
-            console.error('Content length:', content.length);
+            logger.error('Invalid HMAC signature', {
+                expected: generatedSignature,
+                received: receivedSignature,
+                contentLength: content.length
+            });
+
             return res.status(401).send('Unauthorized: Invalid signature');
         }
 
-        console.log('HMAC signature is valid');
+        logger.info('HMAC signature is valid');
         next();
-        
+
     } catch (error) {
-        console.error('HMAC validation error:', error.message);
+        logger.error('HMAC validation error:', {
+            message: error.message
+        });
+
         res.status(500).send('Internal Server Error');
     }
 }

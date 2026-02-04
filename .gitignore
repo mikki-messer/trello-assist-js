@@ -10,3 +10,4 @@ trello-response-webhook.json
 .Spotlight-V100
 .Trashes
 config/boards.local.js
+logs/
