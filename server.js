@@ -2,7 +2,7 @@ require('dotenv').config();
 const express = require('express');
 
 const logger = require('./logger');
-const { incrementProjectCounter } = require('./db');
+const { initDatabase, incrementProjectCounter } = require('./db');
 const { getProjectNameFromIdValue, updateCardTitle } = require('./trello-utils');
 const { formatCardTitle } = require('./utils');
 const { validateHMAC } = require('./middleware/hmac-validation');
@@ -17,6 +17,9 @@ const WEBHOOK_PATH = process.env.APP_WEBHOOK_PATH;
 
 //Middleware for the JSON parsing
 app.use(express.json());
+
+//INIT DB
+initDatabase();
 
 //HEAD endpoint for Trello-checkup
 app.head(WEBHOOK_PATH, (req, res) => {

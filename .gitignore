@@ -1,6 +1,9 @@
 node_modules/
 .env
 *.db
+*.db-shm
+*.db-wal
+*.db-journal
 trello-response.json
 trello-response-webhook.json
 # macOS

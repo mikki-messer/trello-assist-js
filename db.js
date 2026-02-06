@@ -1,9 +1,13 @@
 const sqlite3 = require('sqlite3').verbose();
+const logger = require('./logger');
 const { resolve } = require('dns');
 const { promisify } = require('util');
 
 //create/open db
 const db = new sqlite3.Database('projects.db')
+
+//turning on the WAL mode
+db.run('PRAGMA journal_mode = WAL');
 
 //wrapping methods into promises
 function dbRun(sql, params = []) {
@@ -22,20 +26,45 @@ function dbRun(sql, params = []) {
     });
 }
 
-const dbGet = promisify(db.get.bind(db));
-const dbAll = promisify(db.all.bind(db));
+function dbGet(sql, params = []) {
+    return new Promise((resolve, reject) => {
+        db.get(sql, params, (err, row) => {
+            if (err) {
+                reject(err);
+            } else {
+                resolve(row);
+            }
+        })
+    });
+}
+
+function dbAll (sql, params = []) {
+    return new Promise((resolve, reject) => {
+        db.get(sql, params, (err, row) => {
+            if (err) {
+                return err;
+            } else {
+                resolve(row);
+            }
+        })
+    });
+} 
 
 //db initialization
 async function initDatabase() {
-    await dbRun(`
-        CREATE TABLE IF NOT EXISTS projects (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            project_name TEXT UNIQUE NOT NULL,
-            last_number INTEGER DEFAULT 0
-        )
-    `);
+    try {
+        logger.info('DB initialization...');
+        const {runMigrations } = require('./migrations');
+        await runMigrations();
 
-    console.log('Database initialization completed successfully');
+        logger.info('DB initialized successfully');
+    } catch (error) {
+        logger.error('DB initialization failed', {
+            error: error.message,
+            stack: error.stack
+        });
+        throw error;
+    }
 }
 
 async function getOrCreateProject(projectName) {
@@ -47,6 +76,8 @@ async function getOrCreateProject(projectName) {
         );
 
         if (!project) {
+            logger.info('Creating new project',{ projectName });
+
             await dbRun(
                 'INSERT INTO projects (project_name, last_number) VALUES (?, ?)',
                 [projectName, 0]
@@ -60,7 +91,10 @@ async function getOrCreateProject(projectName) {
 
         return project;
     } catch (error) {
-        console.error('getOrCreateProject failed:', error.message);
+        logger.error('getOrCreateProject failed:', {
+            error: error.message,
+            projectName
+        })
         throw error;
     }
 }
@@ -79,9 +113,17 @@ async function incrementProjectCounter(projectName) {
         //getting the updated value
         const project = await getOrCreateProject(projectName);
 
+        logger.debug('Counter incremented', {
+            projectName,
+            newNumber: project.last_number
+        })
+
         return project.last_number;
     } catch (error) {
-        console.error('incrementProjectCounter failed:', error.message);
+        logger.error('incrementProjectCounter failed:', {
+            message: error.message,
+            projectName
+        });
         throw error;
     } 
 }

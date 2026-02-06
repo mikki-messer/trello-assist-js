@@ -36,7 +36,7 @@ async function createMigrationsTable() {
 
 async function getCurrentVersion(){
     try {
-        const result = await dbGet('SELECT MAX(version) as version FROM migrations');
+        const result = await dbGet('SELECT MAX(version) as version FROM migration');
         return result?.version || 0;
     } catch (error) {
         // Table doesn't exist yet
@@ -51,7 +51,7 @@ async function getCurrentVersion(){
 
 async function getCurrentVersion() {
     try {
-        const result = await dbGet('SELECT MAX(version) as version FROM migrations');
+        const result = await dbGet('SELECT MAX(version) as version FROM migration');
         return result?.version || 0;
     } catch (error) {
         //table doesn't exist

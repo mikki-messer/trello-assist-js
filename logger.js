@@ -1,6 +1,6 @@
 const winston = require('winston');
 
-const isProduction = process.env.CURRENT_ENV === process.env.PRODUCTION_ENV_NAME;
+const isProduction = process.env.NODE_ENV === process.env.PRODUCTION_ENV_NAME;
 const isDevelopment = !isProduction;
 
 //Console output format
