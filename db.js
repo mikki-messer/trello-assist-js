@@ -40,11 +40,11 @@ function dbGet(sql, params = []) {
 
 function dbAll (sql, params = []) {
     return new Promise((resolve, reject) => {
-        db.get(sql, params, (err, row) => {
+        db.all(sql, params, (err, rows) => {
             if (err) {
-                return err;
+                reject(err);
             } else {
-                resolve(row);
+                resolve(rows);
             }
         })
     });

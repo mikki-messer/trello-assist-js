@@ -19,7 +19,7 @@ const { log } = require('winston');
 
 async function createMigrationsTable() {
     await dbRun(`
-        CREATE TABLE IF NOT EXISTS migration (
+        CREATE TABLE IF NOT EXISTS migrations (
             version INTEGER PRIMARY KEY,
             applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             description TEXT NOT NULL
@@ -36,7 +36,7 @@ async function createMigrationsTable() {
 
 async function getCurrentVersion(){
     try {
-        const result = await dbGet('SELECT MAX(version) as version FROM migration');
+        const result = await dbGet('SELECT MAX(version) as version FROM migrations');
         return result?.version || 0;
     } catch (error) {
         // Table doesn't exist yet
@@ -51,7 +51,7 @@ async function getCurrentVersion(){
 
 async function getCurrentVersion() {
     try {
-        const result = await dbGet('SELECT MAX(version) as version FROM migration');
+        const result = await dbGet('SELECT MAX(version) as version FROM migrations');
         return result?.version || 0;
     } catch (error) {
         //table doesn't exist
@@ -78,7 +78,7 @@ async function isMigrationApplied(version) {
 
 async function recordMigration(version, description) {
     await dbRun(
-        'INSERT INTO migration (version, description) VALUES (?, ?)',
+        'INSERT INTO migrations (version, description) VALUES (?, ?)',
         [version, description]
     );
 }
@@ -138,17 +138,42 @@ async function migration0001_createProjectsTable() {
 
 async function migration002_addCreatedAt() {
     // Check if column already exists
-    const tableInfo = await dbAll ('PRAGMA table_inf(projects');
+    const tableInfo = await dbAll ('PRAGMA table_info(projects)');
     const hasCreatedAt = tableInfo.some(col => col.name === 'created_at');
 
-    if (!hasCreatedAt) {
-        await dbRun(`
-                ALTER TABLE projects
-                ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            `);
-
-        logger.info('Added created_at column to projects');
+    if (hasCreatedAt) {
+        logger.info('Column created_at already exists, skipping the migration');
+        return;
     }
+
+    //recreating the table
+    logger.info('Creating new table with created_at column');
+
+    await dbRun(`
+            CREATE TABLE projects_new (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                project_name TEXT UNIQUE NOT NULL,
+                last_number INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+    logger.info('Copying data from old table to new table');
+
+    await dbRun(`
+            INSERT INTO projects_new (id, project_name, last_number)
+            SELECT id, project_name, last_number
+            FROM projects
+        `);
+
+    logger.info('Dropping the old table');
+    await dbRun('DROP TABLE projects');
+
+    logger.info('Renaming new table to projects');
+
+    await dbRun('ALTER TABLE projects_new RENAME TO projects');
+
+    logger.info('Migration 2 completed: created_at column added successfully');
 }
 
 /**
@@ -174,6 +199,11 @@ async function runMigrations() {
         );
 
         //future migrations to be added here
+        await applyMigration(
+            2,
+            'Add the CreatedAt field for projects',
+            migration002_addCreatedAt
+        );
 
         const newVersion = await getCurrentVersion();
 
@@ -206,8 +236,14 @@ async function getMigrationHistory() {
 
         return migrations || [];
     } catch (error) {
+        
+        if (error.message && error.message.includes('no such table')) {
+            logger.debug('Migrations table does not exist yet (first run)');
+            return [];
+        }
+
         logger.error(`Error fetching migrations list ${error.message}`);
-        return [];
+        throw error;
     }
 }
 
@@ -216,19 +252,27 @@ async function getMigrationHistory() {
  */
 
 async function  showMigrationStatus() {
-    const currentVersion = await getCurrentVersion();
-    const history = await getMigrationHistory();
+    try {
+        const currentVersion = await getCurrentVersion();
+        const history = await getMigrationHistory();
 
-    console.log(`Current version: ${currentVersion}`);
-    console.log(`\nMigration History:\n`);
+        console.log(`Current version: ${currentVersion}`);
+        console.log(`\nMigration History:\n`);
 
-    if (history.length === 0) {
-        console.log('No migrations applied yet');
-    } else {
-        history.forEach(m => {
-            console.log(`[${m.version} ${m.description}] applied at: ${m.applied_at}`);
-        })
-    }
+        if (history.length === 0) {
+            console.log('No migrations applied yet');
+        } else {
+            history.forEach(m => {
+                console.log(`[${m.version} ${m.description}] applied at: ${m.applied_at}`);
+            })
+        }
+    } catch (eror) {
+
+            console.error('Error showing migration status\n');
+            console.error('Error:', error.message);
+            console.error(`\nStack trace: ${error.stack}`);
+            throw error;
+        }
 }
 
 module.exports = {
