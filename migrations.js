@@ -146,34 +146,46 @@ async function migration002_addCreatedAt() {
         return;
     }
 
-    //recreating the table
-    logger.info('Creating new table with created_at column');
+    await dbRun('BEGIN TRANSACTION');
 
-    await dbRun(`
-            CREATE TABLE projects_new (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                project_name TEXT UNIQUE NOT NULL,
-                last_number INTEGER DEFAULT 0,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        `);
+    try {
+        //recreating the table
+        logger.info('Creating new table with created_at column');
 
-    logger.info('Copying data from old table to new table');
+        await dbRun(`
+                CREATE TABLE projects_new (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    project_name TEXT UNIQUE NOT NULL,
+                    last_number INTEGER DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            `);
 
-    await dbRun(`
-            INSERT INTO projects_new (id, project_name, last_number)
-            SELECT id, project_name, last_number
-            FROM projects
-        `);
+        logger.info('Copying data from old table to new table');
 
-    logger.info('Dropping the old table');
-    await dbRun('DROP TABLE projects');
+        await dbRun(`
+                INSERT INTO projects_new (id, project_name, last_number)
+                SELECT id, project_name, last_number
+                FROM projects
+            `);
 
-    logger.info('Renaming new table to projects');
+        logger.info('Dropping the old table');
+        await dbRun('DROP TABLE projects');
 
-    await dbRun('ALTER TABLE projects_new RENAME TO projects');
+        logger.info('Renaming new table to projects');
 
-    logger.info('Migration 2 completed: created_at column added successfully');
+        await dbRun('ALTER TABLE projects_new RENAME TO projects');
+
+        //commit transaction
+        dbRun('COMMIT');
+
+        logger.info('Migration 2 completed: created_at column added successfully');
+    } catch (error) {
+        //rollback transaction
+        logger.error('rollback transaction');
+        await dbRun('ROLLBACK');
+        throw error;
+    }
 }
 
 /**
