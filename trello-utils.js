@@ -7,7 +7,7 @@ const CUSTOM_FIELDS_URL = process.env.TRELLO_CUSTOM_FIELDS_URL;
 const CARDS_URL = process.env.TRELLO_CARDS_URL;
 
 //cache for keeping customFieldOptions
-let customFieldOptionsCache = {};
+const customFieldOptionsCache = {};
 
 //fetch customFieldOptions
 async function getCustomFieldOptions(customFieldId) {

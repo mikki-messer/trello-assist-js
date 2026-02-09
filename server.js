@@ -7,7 +7,6 @@ const { getProjectNameFromIdValue, updateCardTitle } = require('./trello-utils')
 const { formatCardTitle } = require('./utils');
 const { validateHMAC } = require('./middleware/hmac-validation');
 const { isBoardRegistered, getBoardDescription, getAllBoards } = require('./config/boards');
-const { log } = require('winston');
 
 const app = express();
 
@@ -149,7 +148,7 @@ app.head(process.env.APP_HEALTHCHECK_PATH, async(req, res) => {
         const { dbGet } = require('./db');
         await dbGet('SELECT 1');
         res.status(200).end();
-    } catch (error) {
+    } catch {
         res.status(503).end();
     }
 });

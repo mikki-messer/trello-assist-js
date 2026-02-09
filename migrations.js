@@ -1,6 +1,5 @@
 const logger = require('./logger');
 const { dbRun, dbGet, dbAll } = require('./db');
-const { log } = require('winston');
 
 /**
  * Database Migration System
@@ -38,23 +37,9 @@ async function getCurrentVersion(){
     try {
         const result = await dbGet('SELECT MAX(version) as version FROM migrations');
         return result?.version || 0;
-    } catch (error) {
+    } catch {
         // Table doesn't exist yet
-        return 0;
-    }
-}
-
-/** 
- * Get current database version
- * @returns {Promise<number>} Current version (0 if no migrations applied)
- */
-
-async function getCurrentVersion() {
-    try {
-        const result = await dbGet('SELECT MAX(version) as version FROM migrations');
-        return result?.version || 0;
-    } catch (error) {
-        //table doesn't exist
+        logger.info('Table does not exist yet');
         return 0;
     }
 }
@@ -112,7 +97,9 @@ async function applyMigration(version, description, upFunction) {
             error: error.message,
             stack: error.stack
         });
-        throw new Error(`Migration ${version} failed ${error.message}`);
+        throw new Error(`Migration ${version} failed ${error.message}`, {
+            cause: error
+        });
     }
 }
 
@@ -278,7 +265,7 @@ async function  showMigrationStatus() {
                 console.log(`[${m.version} ${m.description}] applied at: ${m.applied_at}`);
             })
         }
-    } catch (eror) {
+    } catch (error) {
 
             console.error('Error showing migration status\n');
             console.error('Error:', error.message);

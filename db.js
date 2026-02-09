@@ -1,7 +1,5 @@
 const sqlite3 = require('sqlite3').verbose();
 const logger = require('./logger');
-const { resolve } = require('dns');
-const { promisify } = require('util');
 
 //create/open db
 const db = new sqlite3.Database('projects.db')
@@ -112,11 +110,6 @@ async function incrementProjectCounter(projectName) {
 
         //getting the updated value
         const project = await getOrCreateProject(projectName);
-
-        logger.debug('Counter incremented', {
-            projectName,
-            newNumber: project.last_number
-        })
 
         return project.last_number;
     } catch (error) {

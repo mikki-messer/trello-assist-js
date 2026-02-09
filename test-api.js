@@ -1,6 +1,6 @@
 require('dotenv').config();
 const axios = require('axios');
-const fs = require('fs');
+//const fs = require('fs');
 
 //fetching keys from .env
 const API_KEY = process.env.TRELLO_API_KEY;

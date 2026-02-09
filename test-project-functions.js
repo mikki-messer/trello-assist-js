@@ -6,7 +6,7 @@ async function testProjectFunctions() {
         await initDatabase();
 
         console.log('Test 1: new project creation');
-        let testProjectName = 'TEST';
+        const testProjectName = 'TEST';
         const newProject = await getOrCreateProject(testProjectName);
         console.log('New project created:', newProject);
 
@@ -25,7 +25,7 @@ async function testProjectFunctions() {
         console.log('Third number:', thirdNumber);
 
         console.log('Test 4: autoincrement with project creation');
-        let anotherTestProjectName = 'TEST1';
+        const anotherTestProjectName = 'TEST1';
         const fourthNumber = await incrementProjectCounter(anotherTestProjectName);
         console.log('Number for', anotherTestProjectName, fourthNumber);
 
