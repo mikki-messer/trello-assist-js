@@ -221,5 +221,8 @@ process.on('SIGTERM', () => {
     process.exit(0);
 })
 
+//test unused variable
+var testVar = 123;
+
 //Starting the application
 startServer();
