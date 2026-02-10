@@ -1,6 +1,6 @@
 # TrelloAssist
 
-![Lint Status](https://github.com/mikki-messer/trelloassist/workflows/Lint%20Code/badge.svg)
+![Lint Status](https://github.com/mikki-messer/trello-assist-js/workflows/Lint%20Code/badge.svg)
 
 Automatic Trello card numbering based on project selection.
 
