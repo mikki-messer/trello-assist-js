@@ -14,3 +14,4 @@ trello-response-webhook.json
 .Trashes
 config/boards.local.js
 logs/
+backups/
