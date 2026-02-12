@@ -157,6 +157,10 @@ async function  startServer() {
     try {
         logger.info('Starting server...');
 
+        //checking the envs
+        const { validateEnv } = require('./utils/validate-env.js');
+        validateEnv();
+
         //Initializing database
         logger.info('Initializing database');
         await initDatabase();
