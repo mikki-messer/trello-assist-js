@@ -35,7 +35,8 @@ const REQUIRED_VARS = [
     'LOG_COMBINED_FILE_NAME',
     'LOG_ERROR_LEVEL',
     'MAX_LOG_SIZE',
-    'MAX_FILE_NUMBER'
+    'MAX_FILE_NUMBER',
+    'DB_PATH'
 ];
 
 /**

@@ -1,8 +1,12 @@
+require('dotenv').config();
 const sqlite3 = require('sqlite3').verbose();
 const logger = require('./logger');
+const path = require('path');
+
+const DB_PATH = process.env.DB_PATH;
 
 //create/open db
-const db = new sqlite3.Database('projects.db')
+const db = new sqlite3.Database(DB_PATH)
 
 //turning on the WAL mode
 db.run('PRAGMA journal_mode = WAL');

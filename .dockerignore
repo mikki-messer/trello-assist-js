@@ -1,0 +1,65 @@
+# Dependencies
+node_modules/
+npm-debug.log
+package-lock.json
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Database files
+*.db
+*.db-wal
+*.db-shm
+
+# Logs
+logs/
+*.log
+
+# Backups
+backups/
+
+# Git
+.git/
+.gitignore
+.github/
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose.yml
+
+# Documentation
+README.md
+ARCHITECTURE.md
+*.md
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+test/
+tests/
+*.test.js
+coverage/
+
+# Linting
+.eslintrc.js
+.eslintignore
+eslint.config.mjs
+
+# Scripts (not needed in container)
+scripts/register-webhook.js
+scripts/list-boards.js
+scripts/show-migrations.js
+
+# Config examples
+config/boards.example.js
