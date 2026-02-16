@@ -29,7 +29,7 @@ COPY --chown=nodejs:nodejs . .
 
 #Create necessary directories
 RUN mkdir -p logs data && \
-    CHOWN -R nodejs:nodejs logs data
+    chown -R nodejs:nodejs logs data
 
 #Switch to non-root user
 USER nodejs
