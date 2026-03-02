@@ -59,13 +59,18 @@ async function registerWebhook(boardId, description) {
         console.error(`Registration failed for ${description}`);
         
         if (error.response) {
-            console.error(`   Error: ${error.response.data}`);
+            console.error(`   Status: ${error.response.status}`);
+            console.error('   Error:', JSON.stringify(error.response.data, null, 2));
         } else {
             console.error(`   Error: ${error.message}`);
         }
         console.log('');
 
-        return { success: false, board: description, error: error.message };
+        return { 
+            success: false, 
+            board: description, 
+            error: error.response?.data || error.message
+        };
     }
 }
 
@@ -112,7 +117,7 @@ async function main() {
         process.exit(1);
     }
 
-    console.log('✅ All webhooks registered successfully!');
+    console.log('All webhooks registered successfully!');
     console.log('');
 }
 
