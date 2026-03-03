@@ -3,7 +3,7 @@ const express = require('express');
 
 const logger = require('./logger');
 const { initDatabase, incrementProjectCounter } = require('./db');
-const { getProjectNameFromIdValue, updateCardTitle } = require('./trello-utils');
+const { getProjectNameFromIdValue, updateCardTitle } = require('./utils/trello-utils');
 const { formatCardTitle } = require('./utils/format.js');
 const { validateHMAC } = require('./middleware/hmac-validation');
 const { isBoardRegistered, getBoardDescription, getAllBoards } = require('./config/boards');

@@ -17,9 +17,9 @@ async function getMyBoards() {
         response.data.forEach(board => {
             console.log(board.name);
         });
-        //console.log(JSON.stringify(response.data, null, 2));
+        console.log(JSON.stringify(response.data, null, 2));
         //fs.writeFileSync('trello-response.json', JSON.stringify(response.data, null, 2));
-        console.log('file saved');
+        console.log('completed');
 
     } catch (error) {
         console.error('Error:', error.message)

@@ -15,3 +15,6 @@ trello-response-webhook.json
 config/boards.local.js
 logs/
 backups/
+test-api.js
+test-db.js
+test-custom-field.js
