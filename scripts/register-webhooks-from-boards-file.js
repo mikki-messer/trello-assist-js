@@ -98,7 +98,7 @@ async function main() {
 
     // Summary
     console.log('================================');
-    console.log('📊 Summary:');
+    console.log(' Summary:');
     console.log('');
     
     const successful = results.filter(r => r.success).length;
