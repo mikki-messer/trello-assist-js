@@ -1,13 +1,18 @@
 {
   "name": "trelloassist",
   "version": "1.0.0",
-  "description": "",
+  "description": "Trello webhook-based automation for sequential card numbering",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "backup": "./scripts/backup.sh"
+    "backup": "./scripts/backup.sh",
+    
+    "// Webhook Management": "Commands for managing Trello webhooks",
+    "webhooks:list": "node scripts/list-webhooks.js",
+    "webhooks:delete": "node scripts/delete-all-webhooks.js",
+    "webhooks:register": "node scripts/register-webhooks-from-boards-file.js"
   },
   "keywords": [],
   "author": "",
