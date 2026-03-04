@@ -2,27 +2,26 @@
 
 ![Lint Status](https://github.com/mikki-messer/trello-assist-js/workflows/Lint%20Code/badge.svg)
 
-Automatic Trello card numbering based on project selection.
-
-Automated project numbering system for Trello cards. Automatically assigns sequential numbers to cards based on project selection.
+Automated project numbering system for Trello cards. Automatically assigns sequential numbers to cards based on Custom Field selection via webhooks.
 
 ## Features
 
-- **Automatic Card Numbering**: Cards are automatically renamed with project prefix and sequential number (e.g., `PRJ-25 Task Name`)
-- **Multi-Board Support**: Supports multiple Trello boards with independent webhook registration
-- **Cross-Board Numbering**: Sequential numbering across all boards (shared counter per project)
-- **HMAC Security**: Webhook signature validation to prevent unauthorized requests
-- **Adaptive Logging**: Environment-based logging (files in dev, stdout in production)
-- **Health Monitoring**: Health check endpoint for monitoring and load balancers
+- **Automatic Card Numbering** — Cards are renamed with project prefix and sequential number (e.g., `PRJ-25 Task Name`)
+- **Multi-Board Support** — Monitor multiple Trello boards with independent webhook registration
+- **Cross-Board Numbering** — Sequential numbering shared across all boards per project
+- **HMAC Security** — Webhook signature validation to prevent unauthorized requests
+- **Adaptive Logging** — File-based logging in development, stdout in production
+- **Health Monitoring** — Health check endpoint for monitoring and load balancers
+- **Docker Ready** — Production-ready Docker and docker-compose setup
 
 ## How It Works
 
 1. User changes the "Project" custom field on a Trello card
 2. Trello sends a webhook to the server
 3. Server validates HMAC signature
-4. Server checks if board is registered
-5. Server increments project counter in database
-6. Server updates card title with `{PREFIX}-{NUMBER} {Original Title}`
+4. Server checks if the board is registered
+5. Server increments the project counter in the database
+6. Server updates the card title with `{PREFIX}-{NUMBER} {Original Title}`
 
 **Example:**
 ```
@@ -35,177 +34,341 @@ Result: "PRJ-25 Fix login bug"
 
 ## Prerequisites
 
-- **Node.js** 14+ and npm
-- **Trello Account** with API access
-- **ngrok** (for local development) or public server
-- **SQLite** (included with Node.js)
+- **Trello Account** with API access ([Power-Ups admin](https://trello.com/power-ups/admin))
+- **Docker Desktop** (for Docker deployment) or **Node.js 20+** and npm (for local development)
+- **ngrok** (for local development) or a publicly accessible server
+- **SQLite** (included with Node.js, no separate installation needed)
 
 ---
 
-## Installation
+## Quick Start
 
-### 1. Clone the repository
+### Option A: Docker (Recommended)
+
 ```bash
 git clone <your-repo-url>
 cd trelloassist
+cp .env.example .env         # Edit with your credentials
+cp config/boards.example.js config/boards.local.js  # Add your board IDs
+docker compose up -d
 ```
 
-### 2. Install dependencies
+### Option B: Local Development
+
 ```bash
+git clone <your-repo-url>
+cd trelloassist
 npm install
+cp .env.example .env         # Edit with your credentials
+cp config/boards.example.js config/boards.local.js  # Add your board IDs
+node server.js
 ```
 
-### 3. Configure environment variables
+After starting the server, register webhooks for your boards:
 
-Copy the example file:
+```bash
+npm run webhooks:register
+```
+
+---
+
+## 🐋 Docker Deployment
+
+### Prerequisites
+
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running
+
+### Starting the Service
+
+```bash
+docker compose up -d
+```
+
+This builds the image from the `Dockerfile`, starts the container in the background, and maps port 3000.
+
+### Commands Reference
+
+| Command | Description |
+|---------|-------------|
+| `docker compose up -d` | Start the service in the background |
+| `docker compose down` | Stop and remove the container |
+| `docker compose logs -f` | Follow container logs |
+| `docker compose ps` | Show container status |
+| `docker compose exec app sh` | Open a shell inside the container |
+| `docker compose restart` | Restart the service |
+| `docker compose up -d --build` | Rebuild and restart |
+
+### Data Persistence
+
+The following directories are mounted as volumes and persist across container restarts:
+
+| Volume | Path | Purpose |
+|--------|------|---------|
+| `./data` | `/app/data` | SQLite database |
+| `./logs` | `/app/logs` | Log files |
+| `./backups` | `/app/backups` | Database backups |
+
+### Health Check
+
+Docker performs automatic health checks every 30 seconds against the health endpoint. Check container health status:
+
+```bash
+docker compose ps
+```
+
+The `STATUS` column shows `healthy`, `unhealthy`, or `starting`.
+
+### Environment Variables
+
+The container reads environment variables from the `.env` file via the `env_file` directive in `docker-compose.yml`. To update variables, edit `.env` and restart:
+
+```bash
+docker compose restart
+```
+
+### Container Details
+
+- **Container name**: `trelloassist`
+- **Base image**: `node:20-alpine`
+- **Runs as**: Non-root user (`nodejs`)
+- **Restart policy**: `unless-stopped`
+- **Log rotation**: max 10MB per file, 3 files
+
+---
+
+## Configuration
+
+### Environment Variables
+
+Copy `.env.example` to `.env` and fill in your values:
+
 ```bash
 cp .env.example .env
 ```
 
-Edit `.env` with your credentials:
-```bash
-# Trello API (get from https://trello.com/power-ups/admin)
-TRELLO_API_KEY=your_api_key_here
-TRELLO_TOKEN=your_token_here
-TRELLO_SECRET=your_webhook_secret_here
+Key variables:
 
-# Webhook callback URL (your server URL)
-CALLBACK_URL=https://your-ngrok-url.ngrok-free.app/
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `TRELLO_API_KEY` | Trello API key | From [Power-Ups admin](https://trello.com/power-ups/admin) |
+| `TRELLO_TOKEN` | Trello API token | Generated from Power-Ups admin |
+| `TRELLO_SECRET` | Webhook HMAC secret | Generated from Power-Ups admin |
+| `CALLBACK_URL` | Server base URL | `https://abc.ngrok-free.app` |
+| `APP_WEBHOOK_PATH` | Webhook endpoint path | `/webhook` |
+| `APP_HEALTHCHECK_PATH` | Health check path | `/health` |
+| `TRELLO_CUSTOM_FIELD_NAME` | Custom field to watch | `Project` |
+| `TRELLO_WEBHOOK_DESCRIPTION` | Description for registered webhooks | `TrelloAssist` |
+| `PORT` | Server port | `3000` |
+| `NODE_ENV` | Environment mode | `development` or `production` |
+| `LOG_LEVEL` | Logging verbosity | `error`, `warn`, `info`, `debug` |
+| `DB_PATH` | SQLite database path | `projects.db` |
 
-# App configuration
-TRELLO_CUSTOM_FIELD_NAME=Project
-TRELLO_EVENT_TYPE=updateCustomFieldItem
-APP_WEBHOOK_PATH=/your_webhook_path_with_leading_slash
-APP_HEALTHCHECK_PATH=/your_health_endpoint_path_with_leading_slash
+The full callback URL for Trello webhooks is composed from `CALLBACK_URL` + `APP_WEBHOOK_PATH` (e.g., `https://abc.ngrok-free.app/webhook`).
 
-#Webhook description
-TRELLO_WEBHOOK_DESCRIPTION=your_description_here
-
-# Server
-PORT=3000
-NODE_ENV=development
-
-# Logging
-LOG_LEVEL=info
-```
+See `.env.example` for the complete list of variables.
 
 **Getting Trello credentials:**
 1. Go to https://trello.com/power-ups/admin
-2. Create a new Power-Up (or use existing)
-3. Copy API Key
-4. Generate Token
-5. Generate Webhook Secret
+2. Create a new Power-Up (or use an existing one)
+3. Copy the API Key
+4. Generate a Token
+5. Note the Webhook Secret (used for HMAC validation)
 
-### 4. Configure boards
+### Board Configuration
 
-Copy the boards template:
-```bash
-cp config/boards.example.js config/boards.local.js
-```
+Boards are configured in `config/boards.local.js` as an object with board IDs as keys:
 
-Get your board IDs:
-```bash
-node scripts/list-boards.js
-```
-
-Add your boards to `config/boards.local.js`:
 ```javascript
 const boards = {
-    'your_board_id_here': 'Board Description',
-    '1a2b3c4a1d4e5f6g7h8i9j0k': 'Development Board',
-    // Add more boards as needed
+    '5f8b3c2a1d4e5f6g7h8i9j0k': 'Development Board',
+    '6a9c4d3b2e5f7g8h9i0j1k2l': 'Marketing Projects',
 };
 
 module.exports = { boards };
 ```
 
-**Note:** `boards.local.js` is in `.gitignore` and will not be committed.
+To find your board IDs:
 
-### 5. Register webhooks
-
-For each board, register a webhook:
 ```bash
-node register-webhook.js <board_id> "Board Description"
+node scripts/list-boards.js
 ```
 
-Example:
-```bash
-node register-webhook.js 5f8b3c2a1d4e5f6g7h8i9j0k "Development Board"
-```
+`boards.local.js` is in `.gitignore` and will not be committed.
 
-Verify registration:
-```bash
-node list-webhooks.js
-```
+### Custom Field Setup in Trello
 
-### 6. Start the server
-
-**Development:**
-```bash
-node server.js
-```
-
-**Production:**
-```bash
-NODE_ENV=production node server.js
-```
-
-**With nodemon (auto-reload):**
-```bash
-npm install -g nodemon
-nodemon server.js
-```
+1. Enable the **Custom Fields** Power-Up on your Trello board
+2. Add a dropdown custom field named to match `TRELLO_CUSTOM_FIELD_NAME` (e.g., "Project")
+3. Add dropdown options for each project prefix (e.g., "PRJ", "MKT", "DEV")
 
 ---
 
-## Usage
+## Webhook Management
 
-### Adding a New Board
+### Available Commands
 
-1. Get the board ID:
+| Command | Description |
+|---------|-------------|
+| `npm run webhooks:list` | List all registered webhooks |
+| `npm run webhooks:register` | Register webhooks for all boards in `boards.local.js` |
+| `npm run webhooks:delete` | Delete all registered webhooks |
+
+### Registering Webhooks
+
+Register webhooks for all boards defined in `config/boards.local.js`:
+
 ```bash
-   node scripts/list-boards.js
+npm run webhooks:register
 ```
 
-2. Register a webhook:
+The server must be running and accessible at `CALLBACK_URL` before registering webhooks, because Trello sends a HEAD request to verify the callback URL during registration.
+
+### When ngrok URL Changes
+
+If you use ngrok for local development, the URL changes on each restart (unless you have a paid plan). To update:
+
+1. Update `CALLBACK_URL` in `.env` with the new ngrok URL
+2. Restart the server
+3. Delete old webhooks and register new ones:
+
 ```bash
-   node register-webhook.js <board_id> "add_your_description"
+npm run webhooks:delete
+npm run webhooks:register
 ```
 
-3. Add board to `config/boards.local.js`:
-```javascript
-   const boards = {
-       // ... existing boards
-       'new_board_id': 'Board Description',
-   };
-```
+### Registering a Single Webhook
 
-4. Restart the server
+To register a webhook for a single board:
 
-### Using in Trello
-
-1. Create or open a card
-2. Set the "Project" custom field (e.g., select "LV")
-3. Card is automatically renamed: `PRJ-1 Original Card Name`
-4. Next card with same project: `PRJ-2 Next Card Name`
-
-### Removing a Board
-
-1. Remove from `config/boards.local.js`
-2. Delete webhook:
 ```bash
-   node delete-webhook.js <webhook_id>
+node scripts/register-webhook.js <board_id> "Board Description"
 ```
-3. Restart the server
+
+### Deleting a Single Webhook
+
+```bash
+node scripts/delete-webhook.js <webhook_id>
+```
+
+Find webhook IDs with `npm run webhooks:list`.
+
+---
+
+## 🔧 Development
+
+### Local Setup
+
+```bash
+npm install
+cp .env.example .env
+cp config/boards.example.js config/boards.local.js
+node server.js
+```
+
+### Using ngrok for Webhook Testing
+
+Trello requires a publicly accessible HTTPS URL for webhooks. Use [ngrok](https://ngrok.com/) during local development:
+
+```bash
+ngrok http 3000
+```
+
+Copy the HTTPS forwarding URL to `CALLBACK_URL` in `.env`, then restart the server and register webhooks.
+
+### Linting
+
+The project uses ESLint with CI via GitHub Actions.
+
+```bash
+npm run lint          # Check for issues
+npm run lint:fix      # Auto-fix issues
+```
+
+### Database Backup
+
+```bash
+npm run backup
+```
+
+This runs `scripts/backup.sh` to create a backup in the `backups/` directory.
+
+---
+
+## Scripts Reference
+
+### npm Scripts
+
+| Script | Command | Description |
+|--------|---------|-------------|
+| `npm start` | `node server.js` | Start the server |
+| `npm run lint` | `eslint .` | Run ESLint |
+| `npm run lint:fix` | `eslint . --fix` | Auto-fix lint issues |
+| `npm run backup` | `./scripts/backup.sh` | Backup the database |
+| `npm run webhooks:list` | `node scripts/list-webhooks.js` | List all webhooks |
+| `npm run webhooks:delete` | `node scripts/delete-all-webhooks.js` | Delete all webhooks |
+| `npm run webhooks:register` | `node scripts/register-webhooks-from-boards-file.js` | Register webhooks from `boards.local.js` |
+
+### Utility Scripts in `scripts/`
+
+| Script | Description |
+|--------|-------------|
+| `list-boards.js` | List all boards accessible by your Trello token |
+| `list-webhooks.js` | List all registered webhooks |
+| `register-webhook.js` | Register a webhook for a single board |
+| `register-webhooks-from-boards-file.js` | Register webhooks for all boards in `boards.local.js` |
+| `delete-webhook.js` | Delete a single webhook by ID |
+| `delete-all-webhooks.js` | Delete all registered webhooks |
+| `show-migrations.js` | Show applied database migrations |
+| `backup.sh` | Backup the SQLite database |
+
+---
+
+## Project Structure
+
+```
+trelloassist/
+├── config/
+│   ├── boards.js                  # Board configuration loader
+│   ├── boards.example.js          # Template (in Git)
+│   └── boards.local.js            # Your boards (NOT in Git)
+├── middleware/
+│   └── hmac-validation.js         # HMAC signature validation
+├── scripts/
+│   ├── backup.sh                  # Database backup script
+│   ├── delete-all-webhooks.js     # Delete all webhooks
+│   ├── delete-webhook.js          # Delete a single webhook
+│   ├── list-boards.js             # List accessible boards
+│   ├── list-webhooks.js           # List registered webhooks
+│   ├── register-webhook.js        # Register a single webhook
+│   ├── register-webhooks-from-boards-file.js  # Bulk webhook registration
+│   └── show-migrations.js         # Show DB migrations
+├── utils/
+│   ├── format.js                  # Formatting utilities
+│   ├── trello-utils.js            # Trello API client functions
+│   └── validate-env.js            # Environment variable validation
+├── logs/                          # Log files (NOT in Git)
+├── data/                          # Database directory (Docker)
+├── backups/                       # Database backups
+├── db.js                          # SQLite database functions
+├── logger.js                      # Winston logger configuration
+├── migrations.js                  # Database migration runner
+├── server.js                      # Express server & webhook handler
+├── .env                           # Environment variables (NOT in Git)
+├── .env.example                   # Environment template (in Git)
+├── docker-compose.yml             # Docker Compose configuration
+├── Dockerfile                     # Multi-stage Docker build
+└── package.json
+```
 
 ---
 
 ## Architecture
+
 ```
 ┌─────────────────────┐
 │   Trello Board      │
 │   (User changes     │
-│    Project field)   │
+│    Project field)    │
 └──────────┬──────────┘
            │ Webhook (HTTPS)
            ↓
@@ -233,140 +396,22 @@ nodemon server.js
 └─────────────────────┘
 ```
 
-### Project Structure
-```
-trelloassist/
-├── config/
-│   ├── boards.js              # Board configuration loader
-│   ├── boards.example.js      # Template (in Git)
-│   └── boards.local.js        # Your boards (NOT in Git)
-├── middleware/
-│   └── hmac-validation.js     # HMAC signature validation
-├── scripts/
-│   └── list-boards.js         # Helper to find board IDs
-│   └── list-webhooks.js       # List registered webhooks
-├── logs/                      # Log files (NOT in Git)
-│   ├── error.log
-│   └── combined.log
-├── db.js                      # SQLite database functions
-├── logger.js                  # Winston logger configuration
-├── server.js                  # Express server & webhook handler
-├── trello-utils.js            # Trello API client functions
-├── utils.js                   # Utility functions
-├── register-webhook.js        # Register webhooks for boards
-├── delete-webhook.js          # Delete webhooks
-├── .env                       # Environment variables (NOT in Git)
-├── .env.example               # Template (in Git)
-├── projects.db                # SQLite database (NOT in Git)
-└── package.json
-```
-
----
-
-## Logging
-
-### Development Mode
-
-Logs are written to:
-- **Console** (colored, human-readable)
-- **`logs/error.log`** (errors only, JSON format)
-- **`logs/combined.log`** (all levels, JSON format)
-```bash
-# View logs in real-time
-tail -f logs/combined.log
-
-# View only errors
-tail -f logs/error.log
-
-# Filter by board
-tail -f logs/combined.log | grep "boardId"
-```
-
-### Production Mode
-
-Logs are written to **stdout only** (JSON format).
-
-Docker/Kubernetes will collect logs from container output:
-```bash
-# Docker logs
-docker logs -f <container_id>
-
-# Kubernetes logs
-kubectl logs -f <pod_name>
-```
-
-### Log Levels
-
-Set via `LOG_LEVEL` environment variable:
-
-- `error` - Only errors
-- `warn` - Warnings and errors
-- `info` - Informational, warnings, and errors (default)
-- `debug` - All logs including debug messages
-
-Example:
-```bash
-LOG_LEVEL=debug node server.js
-```
-
----
-
-## Security
-
-### HMAC Signature Validation
-
-All webhooks are validated using HMAC-SHA1 signatures:
-
-1. Trello sends webhook with `x-trello-webhook` header containing signature
-2. Server generates its own signature: `HMAC-SHA1(secret, body + callbackURL)`
-3. Signatures are compared
-4. Request is rejected if signatures don't match (401 Unauthorized)
-
-**This prevents:**
-- Unauthorized webhook requests
-- Replay attacks
-- Data tampering
-
-### Board Registration
-
-Only registered boards (in `boards.local.js`) are processed. Webhooks from unregistered boards are logged and ignored.
-
-### Environment Variables
-
-Sensitive data is stored in `.env` (not committed to Git):
-- API keys and tokens
-- HMAC secret
-- Board IDs (in `boards.local.js`)
-
 ---
 
 ## API Endpoints
 
-### POST /app_webhook_path
+### POST `{APP_WEBHOOK_PATH}`
 
-Receives webhooks from Trello.
+Receives webhooks from Trello. Protected by HMAC signature validation.
 
-**Authentication:** HMAC signature validation
+### HEAD `{APP_WEBHOOK_PATH}`
 
-**Request:**
-```
-Headers:
-  x-trello-webhook: <HMAC-SHA1 signature>
-  Content-Type: application/json
+Responds to Trello's webhook verification requests during registration.
 
-Body: (Trello webhook payload)
-```
+### GET `{APP_HEALTHCHECK_PATH}`
 
-**Response:**
-```
-200 OK
-```
+Returns service health status:
 
-### GET /app_healthcheck_path
-
-Health check endpoint for monitoring.
-
-**Response (healthy):**
 ```json
 {
   "status": "healthy",
@@ -377,23 +422,16 @@ Health check endpoint for monitoring.
 }
 ```
 
-**Response (unhealthy):**
-```json
-{
-  "status": "unhealthy",
-  "error": "Database connection failed"
-}
-```
+### HEAD `{APP_HEALTHCHECK_PATH}`
 
-### HEAD /app_healthcheck_pathlth
-
-Lightweight health check (returns only status code, no body).
+Lightweight health check (status code only, no body).
 
 ---
 
 ## Database
 
 ### Schema
+
 ```sql
 CREATE TABLE projects (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -408,162 +446,121 @@ CREATE TABLE migrations (
 );
 ```
 
-### Migrations
+Migrations run automatically on server start. To view applied migrations:
 
-Database migrations run automatically on server start.
-
-To manually run migrations:
 ```bash
-node -e "require('./migrations').runMigrations()"
+node scripts/show-migrations.js
 ```
 
-### Backup
-```bash
-# Backup database
-cp projects.db projects.db.backup
+---
 
-# Restore database
-cp projects.db.backup projects.db
+## Logging
+
+### Development Mode (`NODE_ENV=development`)
+
+Logs are written to both console and files:
+- `logs/error.log` — errors only (JSON)
+- `logs/combined.log` — all levels (JSON)
+
+```bash
+tail -f logs/combined.log
 ```
+
+### Production Mode (`NODE_ENV=production`)
+
+Logs are written to **stdout only** (JSON format), suitable for Docker log collection.
+
+```bash
+docker compose logs -f
+```
+
+### Log Levels
+
+Set via `LOG_LEVEL` environment variable: `error`, `warn`, `info` (default), `debug`.
 
 ---
 
 ## Troubleshooting
 
-### Webhooks not received
+### Webhook Registration Fails
 
-**Check:**
-1. Server is running: `curl http://localhost:3000/app_healthcheck_path` app_healthcheck_path - from .env
-2. ngrok is running (for local development)
-3. Webhook is registered: `node list-webhooks.js`
-4. Board is in `boards.local.js`
-5. Check logs: `tail -f logs/combined.log`
+- **Server must be running** — Trello sends a HEAD request to `CALLBACK_URL` + `APP_WEBHOOK_PATH` during registration to verify the endpoint
+- **URL must be publicly accessible** — Use ngrok for local development
+- **Check credentials** — Verify `TRELLO_API_KEY` and `TRELLO_TOKEN` in `.env`
 
-### Cards not updating
+### HMAC Validation Errors
 
-**Check logs for:**
-- "Webhook from unregistered board" → Add board to `boards.local.js`
-- "Invalid HMAC signature" → Check `TRELLO_SECRET` in `.env`
-- "Could not resolve project name" → Custom field configuration issue
+- Verify `TRELLO_SECRET` in `.env` matches the secret from your Trello Power-Up
+- Ensure the callback URL registered with Trello exactly matches `CALLBACK_URL` + `APP_WEBHOOK_PATH`
+- Check logs for "Invalid HMAC signature" messages
 
-**Debug mode:**
+### ngrok URL Changed
+
+1. Update `CALLBACK_URL` in `.env`
+2. Restart the server
+3. Delete old webhooks: `npm run webhooks:delete`
+4. Register new webhooks: `npm run webhooks:register`
+
+### Cards Not Updating
+
+Check logs for:
+- `"Webhook from unregistered board"` — Add the board to `config/boards.local.js`
+- `"Could not resolve project name"` — Check custom field configuration in Trello
+- Enable debug logging: set `LOG_LEVEL=debug` in `.env` and restart
+
+### Database Issues
+
+**Database locked:**
 ```bash
-LOG_LEVEL=debug node server.js
+lsof projects.db    # Find the process
+kill <PID>           # Terminate it
 ```
 
-### Database locked
-
-SQLite database is locked by another process.
-
-**Solution:**
+**View migrations:**
 ```bash
-# Find process using database
-lsof projects.db
-
-# Kill process
-kill <PID>
+node scripts/show-migrations.js
 ```
 
-### ngrok URL changed
+### Docker Connectivity
 
-When ngrok restarts, URL changes. Update:
-
-1. `.env` → `CALLBACK_URL`
-2. Re-register all webhooks:
-```bash
-   node delete-webhook.js <old_webhook_id>
-   node register-webhook.js <board_id> "Description"
-```
+- Verify the container is running: `docker compose ps`
+- Check container health: look for `healthy` in the STATUS column
+- View logs: `docker compose logs -f`
+- Ensure port 3000 is not used by another process
+- Rebuild after code changes: `docker compose up -d --build`
 
 ---
 
-## Development
+## Security
 
-### Running tests
-```bash
-# Test database functions
-node test-project-functions.js
+### HMAC Signature Validation
 
-# Test custom field mapping
-node test-custom-field.js
-```
+All incoming webhooks are validated using HMAC-SHA1:
 
-### Code style
+1. Trello sends a signature in the `x-trello-webhook` header
+2. Server computes `HMAC-SHA1(secret, body + callbackURL)`
+3. Signatures are compared; mismatches return 401 Unauthorized
 
-- Use `logger` instead of `console.log`
-- Use async/await instead of callbacks
-- Use descriptive variable names
-- Add comments for complex logic
+### Board Registration
 
-### Adding new features
+Only boards listed in `config/boards.local.js` are processed. Webhooks from unregistered boards are logged and ignored.
 
-1. Create feature branch
-2. Implement feature
-3. Test locally
-4. Update README if needed
-5. Create pull request
+### Sensitive Data
 
----
-
-## Deployment
-
-### Docker
-
-Coming soon. The application is designed for Docker deployment:
-
-- Logs to stdout in production mode
-- Environment variables via Docker
-- Health check endpoint for container health
-- No file-based configuration in production
-
-### Environment Variables for Production (abstract, see full list of variables in the .env.example file)
-```bash
-NODE_ENV=production
-TRELLO_API_KEY=...
-TRELLO_TOKEN=...
-TRELLO_SECRET=...
-CALLBACK_URL=https://your-domain.com/
-PORT=3000
-LOG_LEVEL=info 
-```
-
+API keys, tokens, and secrets are stored in `.env` (excluded from Git). Board IDs are stored in `boards.local.js` (also excluded from Git).
 
 ---
 
 ## Contributing
 
 1. Fork the repository
-2. Create feature branch: `git checkout -b feature/new-feature`
+2. Create a feature branch: `git checkout -b feature/new-feature`
 3. Commit changes: `git commit -m 'Add new feature'`
 4. Push to branch: `git push origin feature/new-feature`
-5. Create pull request
+5. Create a pull request
 
 ---
 
 ## License
 
-[Add your license here]
-
----
-
-## Support
-
-For issues and questions:
-- Check logs: `tail -f logs/combined.log`
-- Check troubleshooting section above
-- Review Trello API documentation: https://developer.atlassian.com/cloud/trello/
-
----
-
-## Changelog
-
-### [1.0.0] - 2026-02-04
-
-**Added:**
-- Initial release
-- Multi-board support
-- HMAC webhook validation
-- Winston logging with adaptive transports
-- Health check endpoint
-- SQLite database with migrations
-- Cross-board sequential numbering
+ISC
