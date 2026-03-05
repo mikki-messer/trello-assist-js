@@ -60,7 +60,7 @@ app.post(WEBHOOK_PATH, validateHMAC, async (req, res) => {
             const card = req.body.action.data.card;
 
             if (customField.name === CUSTOM_FIELD_NAME) {
-                logger.info('Project field changed!', { 
+                logger.info(`${CUSTOM_FIELD_NAME} field changed!`, { 
                     cardId: card.id,
                     cardName: card.name 
                 });
@@ -70,7 +70,7 @@ app.post(WEBHOOK_PATH, validateHMAC, async (req, res) => {
                     customFieldItem.idValue);
 
                 if (projectName) {
-                    logger.info('Project resolved', { projectName });
+                    logger.info(`${CUSTOM_FIELD_NAME} resolved`, { projectName });
 
                     //increasing counter
                     const newNumber = await incrementProjectCounter(projectName);
