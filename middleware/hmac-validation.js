@@ -1,7 +1,7 @@
-const crypto = require('crypto');
-const logger = require('../logger');
+import crypto from 'crypto';
+import logger from'../logger.js';
 
-require('dotenv').config();
+import 'dotenv/config';
 
 function validateHMAC(req, res, next) {
     try {
@@ -59,6 +59,6 @@ function validateHMAC(req, res, next) {
     }
 }
 
-module.exports = {
+export {
     validateHMAC
 }

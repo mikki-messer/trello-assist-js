@@ -1,5 +1,5 @@
-const axios = require('axios');
-require('dotenv').config();
+import axios from 'axios';
+import 'dotenv/config';
 
 const API_KEY = process.env.TRELLO_API_KEY;
 const TOKEN = process.env.TRELLO_TOKEN;
@@ -67,7 +67,7 @@ async function updateCardTitle(cardId, newTitle) {
         throw error;
     }
 }
-module.exports = {
+export {
     getProjectNameFromIdValue,
     updateCardTitle
 };

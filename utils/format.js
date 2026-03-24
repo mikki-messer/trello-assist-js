@@ -11,6 +11,6 @@ function formatCardTitle(projectName, number, currentTitle) {
     return `${projectName}-${number} ${cleanTitle}`;
 }
 
-module.exports = {
+export {
     formatCardTitle
 }

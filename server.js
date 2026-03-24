@@ -1,12 +1,13 @@
-require('dotenv').config();
-const express = require('express');
+import 'dotenv/config';
+import express from 'express';
 
-const logger = require('./logger');
-const { initDatabase, incrementProjectCounter } = require('./db');
-const { getProjectNameFromIdValue, updateCardTitle } = require('./utils/trello-utils');
-const { formatCardTitle } = require('./utils/format.js');
-const { validateHMAC } = require('./middleware/hmac-validation');
-const { isBoardRegistered, getBoardDescription, getAllBoards } = require('./config/boards');
+import logger from './logger.js';
+import { initDatabase, incrementProjectCounter, dbGet } from './db.js';
+import { getProjectNameFromIdValue, updateCardTitle } from './utils/trello-utils.js';
+import { formatCardTitle } from './utils/format.js';
+import { validateHMAC } from './middleware/hmac-validation.js';
+import { isBoardRegistered, getBoardDescription, getAllBoards, getBoardCount } from './config/boards.js';
+import { validateEnv } from './utils/validate-env.js'
 
 const app = express();
 
@@ -115,11 +116,8 @@ const PORT = process.env.PORT || 3000;
 app.get(process.env.APP_HEALTHCHECK_PATH, async(req, res) => {
     try {
         //check DB
-        const { dbGet } = require('./db');
         await dbGet('SELECT 1');
 
-        //check config
-        const { getBoardCount } = require('./config/boards');
         
         res.status(200).json({
             status: 'healthy',
@@ -145,7 +143,6 @@ app.get(process.env.APP_HEALTHCHECK_PATH, async(req, res) => {
 app.head(process.env.APP_HEALTHCHECK_PATH, async(req, res) => {
     //easy check
     try {
-        const { dbGet } = require('./db');
         await dbGet('SELECT 1');
         res.status(200).end();
     } catch {
@@ -158,7 +155,7 @@ async function  startServer() {
         logger.info('Starting server...');
 
         //checking the envs
-        const { validateEnv } = require('./utils/validate-env.js');
+
         validateEnv();
 
         //Initializing database
@@ -167,7 +164,6 @@ async function  startServer() {
         logger.info('Database initialized');
 
         //checking board configuration
-        const { getBoardCount } = require('./config/boards')
         const boardCount = getBoardCount();
 
         if (boardCount === 0) {

@@ -5,7 +5,7 @@
  * before starting the application. Exits with code 1 if any are missing.
  */
 
-const logger = require('../logger');
+import logger from '../logger.js';
 
 // Required environment variables
 const REQUIRED_VARS = [
@@ -70,4 +70,6 @@ function validateEnv() {
     });    
 }
 
-module.exports = { validateEnv };
+export { 
+    validateEnv
+ };

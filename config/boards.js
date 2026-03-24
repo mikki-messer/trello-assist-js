@@ -1,9 +1,9 @@
 let boards = {};
 let configLoaded = false;
+import localConfig from './boards.local.js';
 
 try {
-    const localConfig = require('./boards.local');
-    boards = localConfig.boards || {};
+    boards = localConfig || {};
     configLoaded = true;
 
     const boardCount = Object.keys(boards).length;
@@ -20,6 +20,7 @@ try {
     } else {
         console.error('Error loading boards.local.js:', error.message);
     }
+    configLoaded = false;
 }
 
 //checking if the board is registered
@@ -69,7 +70,7 @@ function removeBoard(boardId){
     return false;
 }
 
-module.exports = {
+export {
     boards,
     isBoardRegistered,
     getBoardDescription,

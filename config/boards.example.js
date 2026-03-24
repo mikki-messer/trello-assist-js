@@ -23,4 +23,6 @@ const boards = {
     
 };
 
-module.exports = { boards };
+export { 
+    boards 
+};

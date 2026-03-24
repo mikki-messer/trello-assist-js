@@ -1,5 +1,5 @@
-require('dotenv').config();
-const { showMigrationStatus } = require('../migrations');
+import 'dotenv/config';
+import { showMigrationStatus } from '../migrations.js';
 
  showMigrationStatus()
     .then(() => {

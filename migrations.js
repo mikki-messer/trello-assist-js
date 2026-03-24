@@ -1,5 +1,5 @@
-const logger = require('./logger');
-const { dbRun, dbGet, dbAll } = require('./db');
+import logger from './logger.js';
+import { dbRun, dbGet, dbAll } from './db.js';
 
 /**
  * Database Migration System
@@ -274,7 +274,7 @@ async function  showMigrationStatus() {
         }
 }
 
-module.exports = {
+export {
     runMigrations,
     getCurrentVersion,
     getMigrationHistory,

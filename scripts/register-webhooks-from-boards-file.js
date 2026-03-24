@@ -5,11 +5,11 @@
  * Usage: node scripts/register-webhook.js
  */
 
-const axios = require('axios');
-require('dotenv').config();
+import axios from 'axios';
+import 'dotenv/config';
 
 // Import boards configuration
-const { boards } = require('../config/boards.local.js');
+import boards from '../config/boards.local.js';
 
 const TRELLO_API_KEY = process.env.TRELLO_API_KEY;
 const TRELLO_TOKEN = process.env.TRELLO_TOKEN;

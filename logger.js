@@ -1,4 +1,4 @@
-const winston = require('winston');
+import winston  from 'winston';
 
 const isProduction = process.env.NODE_ENV === process.env.PRODUCTION_ENV_NAME;
 const isDevelopment = !isProduction;
@@ -83,4 +83,4 @@ if (isDevelopment) {
     });
 }
 
-module.exports = logger;
+export default logger;

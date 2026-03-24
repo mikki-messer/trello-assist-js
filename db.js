@@ -1,7 +1,10 @@
-require('dotenv').config();
-const sqlite3 = require('sqlite3').verbose();
-const logger = require('./logger');
-const path = require('path');
+import 'dotenv/config';
+
+import pkg from 'sqlite3';
+const sqlite3 = pkg.verbose();
+
+import logger from './logger.js';
+import { runMigrations } from './migrations.js';
 
 const DB_PATH = process.env.DB_PATH;
 
@@ -56,7 +59,6 @@ function dbAll (sql, params = []) {
 async function initDatabase() {
     try {
         logger.info('DB initialization...');
-        const {runMigrations } = require('./migrations');
         await runMigrations();
 
         logger.info('DB initialized successfully');
@@ -125,11 +127,11 @@ async function incrementProjectCounter(projectName) {
     } 
 }
 
-module.exports = {
-   initDatabase,
-   dbRun,
-   dbGet,
-   dbAll,
-   getOrCreateProject,
-   incrementProjectCounter 
-}
+export {
+    initDatabase,
+    dbRun,
+    dbGet,
+    dbAll,
+    getOrCreateProject,
+    incrementProjectCounter 
+};

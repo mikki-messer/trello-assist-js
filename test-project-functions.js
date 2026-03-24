@@ -1,4 +1,4 @@
-const { initDatabase, getOrCreateProject, incrementProjectCounter} = require('./db');
+import { initDatabase, getOrCreateProject, incrementProjectCounter } from './db.js';
 
 async function testProjectFunctions() {
     try {
