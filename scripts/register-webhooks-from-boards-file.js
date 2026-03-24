@@ -9,7 +9,7 @@ import axios from 'axios';
 import 'dotenv/config';
 
 // Import boards configuration
-import boards from '../config/boards.local.js';
+import boards from '../src/config/boards.local.js';
 
 const TRELLO_API_KEY = process.env.TRELLO_API_KEY;
 const TRELLO_TOKEN = process.env.TRELLO_TOKEN;

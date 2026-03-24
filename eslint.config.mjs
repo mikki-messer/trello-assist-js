@@ -16,7 +16,7 @@ export default [
   
   // configuration for all js files
   {
-    files: ["**/*.js"],
+    files: ["src/**/*.js", "scripts/**/*.js"],
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "module",
