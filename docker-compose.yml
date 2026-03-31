@@ -25,10 +25,7 @@ services:
     volumes:
       # Database persistence
       - ./data:/app/data
-      
-      # Logs persistence (optional)
-      - ./logs:/app/logs
-      
+            
       # Backups persistence (optional)
       - ./backups:/app/backups
     

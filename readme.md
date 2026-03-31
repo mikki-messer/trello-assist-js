@@ -10,7 +10,7 @@ Automated project numbering system for Trello cards. Automatically assigns seque
 - **Multi-Board Support** — Monitor multiple Trello boards with independent webhook registration
 - **Cross-Board Numbering** — Sequential numbering shared across all boards per project
 - **HMAC Security** — Webhook signature validation to prevent unauthorized requests
-- **Adaptive Logging** — File-based logging in development, stdout in production
+- **Logging** — Logs are written to stdout
 - **Health Monitoring** — Health check endpoint for monitoring and load balancers
 - **Docker Ready** — Production-ready Docker and docker-compose setup
 
@@ -105,7 +105,6 @@ The following directories are mounted as volumes and persist across container re
 | Volume | Path | Purpose |
 |--------|------|---------|
 | `./data` | `/app/data` | SQLite database |
-| `./logs` | `/app/logs` | Log files |
 | `./backups` | `/app/backups` | Database backups |
 
 ### Health Check
@@ -346,7 +345,6 @@ trelloassist/
 │   ├── format.js                  # Formatting utilities
 │   ├── trello-utils.js            # Trello API client functions
 │   └── validate-env.js            # Environment variable validation
-├── logs/                          # Log files (NOT in Git)
 ├── data/                          # Database directory (Docker)
 ├── backups/                       # Database backups
 ├── db.js                          # SQLite database functions
@@ -456,23 +454,27 @@ node scripts/show-migrations.js
 
 ## Logging
 
-### Development Mode (`NODE_ENV=development`)
+Logs are written to **stdout** (JSON format).
 
-Logs are written to both console and files:
-- `logs/error.log` — errors only (JSON)
-- `logs/combined.log` — all levels (JSON)
-
+**Local development:**
 ```bash
-tail -f logs/combined.log
+npm start
+# Logs appear in terminal
 ```
 
-### Production Mode (`NODE_ENV=production`)
-
-Logs are written to **stdout only** (JSON format), suitable for Docker log collection.
-
+**Docker:**
 ```bash
-docker compose logs -f
+# View logs in real-time
+docker-compose logs -f
+
+# Last 100 lines
+docker-compose logs --tail=100
+
+# Logs from last hour
+docker-compose logs --since 1h
 ```
+
+Docker automatically manages log rotation (max 30MB: 3 files × 10MB).
 
 ### Log Levels
 

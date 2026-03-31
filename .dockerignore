@@ -13,7 +13,6 @@ npm-debug.log
 *.db-shm
 
 # Logs
-logs/
 *.log
 
 # Backups

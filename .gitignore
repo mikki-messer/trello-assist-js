@@ -13,8 +13,10 @@ trello-response-webhook.json
 .Spotlight-V100
 .Trashes
 config/boards.local.js
-logs/
+*.log
 backups/
 test-api.js
 test-db.js
 test-custom-field.js
+todo-cs.js
+todo-cs.json

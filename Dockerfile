@@ -28,8 +28,8 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY --chown=nodejs:nodejs src ./src
 
 #Create necessary directories
-RUN mkdir -p logs data && \
-    chown -R nodejs:nodejs logs data
+RUN mkdir -p data backups && \
+    chown -R nodejs:nodejs data backups
 
 #Switch to non-root user
 USER nodejs
