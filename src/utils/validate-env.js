@@ -5,8 +5,6 @@
  * before starting the application. Exits with code 1 if any are missing.
  */
 
-import logger from '../logger.js';
-
 // Required environment variables
 const REQUIRED_VARS = [
     'TRELLO_API_KEY',
@@ -30,12 +28,6 @@ const REQUIRED_VARS = [
     'PRODUCTION_ENV_NAME',
     'NODE_ENV',
     'LOG_LEVEL',
-    'LOGS_TIMESTAMP_FORMAT',
-    'LOG_ERROR_FILE_NAME',
-    'LOG_COMBINED_FILE_NAME',
-    'LOG_ERROR_LEVEL',
-    'MAX_LOG_SIZE',
-    'MAX_FILE_NUMBER',
     'DB_PATH'
 ];
 
@@ -43,7 +35,7 @@ const REQUIRED_VARS = [
  * Validate required environment variables
  * @throws {Error} If any required variable is missing
  */
-function validateEnv() {
+export function validateEnv(logger) {
     const missing = [];
     
     // Check required variables
@@ -69,7 +61,3 @@ function validateEnv() {
         required: REQUIRED_VARS.length
     });    
 }
-
-export { 
-    validateEnv
- };

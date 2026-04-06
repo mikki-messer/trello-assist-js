@@ -2,26 +2,36 @@ import 'dotenv/config';
 
 import pkg from 'sqlite3';
 const sqlite3 = pkg.verbose();
-
-import logger from './logger.js';
 import { runMigrations } from './migrations.js';
 
-const DB_PATH = process.env.DB_PATH;
+/**
+ * Create database connection
+ * @param {string} dbPath - Path to database file
+ * @returns {sqlite3.Database} Database instance
+ */
 
-//create/open db
-const db = new sqlite3.Database(DB_PATH)
+export function createDatabase(dbPath = process.env.DB_PATH) {
+    //create/open db
+    const db = new sqlite3.Database(dbPath);
+    //turning on the WAL mode
+    db.run('PRAGMA journal_mode = WAL');
+    return db;
+}
 
-//turning on the WAL mode
-db.run('PRAGMA journal_mode = WAL');
+/**
+ * Run SQL query (promisified)
+ * @param {sqlite3.Database} db - Database instance
+ * @param {string} sql - SQL query
+ * @param {Array} params - Query parameters
+ * @returns {Promise<{lastID: number, changes: number}>}
+ */
 
-//wrapping methods into promises
-function dbRun(sql, params = []) {
+export function dbRun(db, sql, params = []) {
     return new Promise((resolve, reject) => {
         db.run(sql, params, function(err) {
             if (err) {
                 reject(err);
-            }
-            else {
+            } else {
                 resolve({
                     lastID: this.lastID,
                     changes: this.changes
@@ -31,7 +41,14 @@ function dbRun(sql, params = []) {
     });
 }
 
-function dbGet(sql, params = []) {
+/**
+ * Get single row (promisified)
+ * @param {sqlite3.Database} db - Database instance
+ * @param {string} sql - SQL query
+ * @param {Array} params - Query parameters
+ * @returns {Promise<Object|undefined>}
+ */
+export function dbGet(db, sql, params = []) {
     return new Promise((resolve, reject) => {
         db.get(sql, params, (err, row) => {
             if (err) {
@@ -39,11 +56,18 @@ function dbGet(sql, params = []) {
             } else {
                 resolve(row);
             }
-        })
+        });
     });
 }
 
-function dbAll (sql, params = []) {
+/**
+ * Get all rows (promisified)
+ * @param {sqlite3.Database} db - Database instance
+ * @param {string} sql - SQL query
+ * @param {Array} params - Query parameters
+ * @returns {Promise<Array>}
+ */
+export function dbAll (db, sql, params = []) {
     return new Promise((resolve, reject) => {
         db.all(sql, params, (err, rows) => {
             if (err) {
@@ -55,12 +79,15 @@ function dbAll (sql, params = []) {
     });
 } 
 
-//db initialization
-async function initDatabase() {
+/**
+ * Initialize database schema
+ * @param {sqlite3.Database} db - Database instance
+ * @param {winston.Logger} logger - Logger instance
+ */
+export async function initDatabase(db, logger) {
     try {
         logger.info('DB initialization...');
-        await runMigrations();
-
+        await runMigrations(db, logger);
         logger.info('DB initialized successfully');
     } catch (error) {
         logger.error('DB initialization failed', {
@@ -71,10 +98,18 @@ async function initDatabase() {
     }
 }
 
-async function getOrCreateProject(projectName) {
+/**
+ * Get or create project
+ * @param {sqlite3.Database} db - Database instance
+ * @param {winston.Logger} logger - Logger instance
+ * @param {string} projectName - Project name
+ * @returns {Promise<{id: number, project_name: string, last_number: number}>}
+ */
+export async function getOrCreateProject(db, logger, projectName) {
     try {
         //fetching existing project
         let project = await dbGet(
+            db,
             'SELECT * FROM projects WHERE project_name = ?',
             [projectName]
         );
@@ -83,11 +118,13 @@ async function getOrCreateProject(projectName) {
             logger.info('Creating new project',{ projectName });
 
             await dbRun(
+                db,
                 'INSERT INTO projects (project_name, last_number) VALUES (?, ?)',
                 [projectName, 0]
             );
 
             project = await dbGet(
+                db,
                 'SELECT * FROM projects WHERE project_name = ?',
                 [projectName]
             );
@@ -103,19 +140,27 @@ async function getOrCreateProject(projectName) {
     }
 }
 
-async function incrementProjectCounter(projectName) {
+/**
+ * Increment project counter
+ * @param {sqlite3.Database} db - Database instance
+ * @param {winston.Logger} logger - Logger instance
+ * @param {string} projectName - Project name
+ * @returns {Promise<number>} New counter value
+ */
+export async function incrementProjectCounter(db, logger, projectName) {
     try {
         //making sure the project exists in the DB
-        await getOrCreateProject(projectName);
+        await getOrCreateProject(db, logger, projectName);
 
         //increasing the last_number
         await dbRun(
+            db,
             'UPDATE projects SET last_number = last_number + 1 WHERE project_name = ?',
             [projectName]
         );
 
         //getting the updated value
-        const project = await getOrCreateProject(projectName);
+        const project = await getOrCreateProject(db, logger, projectName);
 
         return project.last_number;
     } catch (error) {
@@ -126,12 +171,3 @@ async function incrementProjectCounter(projectName) {
         throw error;
     } 
 }
-
-export {
-    initDatabase,
-    dbRun,
-    dbGet,
-    dbAll,
-    getOrCreateProject,
-    incrementProjectCounter 
-};

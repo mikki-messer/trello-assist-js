@@ -6,7 +6,7 @@
 set -e  # Exit on error
 
 # Configuration
-DB_FILE="projects.db"
+DB_FILE="./data/projects.db"
 BACKUP_DIR="backups"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 BACKUP_FILE="${BACKUP_DIR}/projects_${TIMESTAMP}.db"

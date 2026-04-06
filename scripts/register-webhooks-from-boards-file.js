@@ -25,7 +25,7 @@ if (!TRELLO_API_KEY || !TRELLO_TOKEN || !CALLBACK_URL || !WEBHOOK_DESCRIPTION ||
 }
 
 // Validate boards configuration
-if (!boards || Object.keys(boards).length === 0 === 0) {
+if (!boards || Object.keys(boards).length === 0) {
     console.error('Error: No boards found in config/boards.local.js');
     process.exit(1);
 }

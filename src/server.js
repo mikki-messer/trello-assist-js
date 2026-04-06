@@ -1,35 +1,56 @@
 import 'dotenv/config';
 import express from 'express';
 
-import logger from './logger.js';
-import { initDatabase, incrementProjectCounter, dbGet } from './db.js';
+import { createLogger } from './logger.js';
+import { 
+    createDatabase,
+    initDatabase,
+    incrementProjectCounter,
+    dbGet 
+} from './db.js';
 import { getProjectNameFromIdValue, updateCardTitle } from './utils/trello-utils.js';
 import { formatCardTitle } from './utils/format.js';
 import { validateHMAC } from './middleware/hmac-validation.js';
 import { isBoardRegistered, getBoardDescription, getAllBoards, getBoardCount } from './config/boards.js';
-import { validateEnv } from './utils/validate-env.js'
-
-const app = express();
+import { validateEnv } from './utils/validate-env.js';
+import { contextMiddleware } from './middleware/context.js';
 
 const CUSTOM_FIELD_NAME = process.env.TRELLO_CUSTOM_FIELD_NAME;
 const EVENT_TYPE = process.env.TRELLO_EVENT_TYPE;
 const WEBHOOK_PATH = process.env.APP_WEBHOOK_PATH;
 
-//Middleware for the JSON parsing
+const app = express();
+
+//Create local instances
+const logger = createLogger();
+const db = createDatabase();
+
+//Middleware
 app.use(express.json());
+app.use(contextMiddleware(logger, db));
 
 //HEAD endpoint for Trello-checkup
 app.head(WEBHOOK_PATH, (req, res) => {
+    const { logger } = req;
+
+    logger.debug('Health check requested');
+
     res.status(200).end();
 })
 
 //GET endpoint for browser checkup
 app.get(WEBHOOK_PATH, (req, res) => {
+    const { logger } = req;
+
+    logger.debug(`Get request received for the ${WEBHOOK_PATH}`);
+
     res.status(200).send('Server is alive! Use POST to send data.');
 })
 
 //Endpoint for the Trello webhooks
 app.post(WEBHOOK_PATH, validateHMAC, async (req, res) => {
+    const { logger, db } = req;
+
     const eventType = req.body.action?.type;
     const boardId = req.body.model?.id;
     const boardName = req.body.model?.name;
@@ -46,7 +67,7 @@ app.post(WEBHOOK_PATH, validateHMAC, async (req, res) => {
             boardName,
             registeredBoards: getAllBoards()
         }); 
-        return res.status(200).send('OK'); //200 to keep the endpoint alive
+        return res.status(200).send('Webhook from unregistered board - ignored'); //200 to keep the endpoint alive
     }
 
     logger.info('Webhook from registered board', {
@@ -67,6 +88,7 @@ app.post(WEBHOOK_PATH, validateHMAC, async (req, res) => {
                 });
 
                 const projectName = await getProjectNameFromIdValue(
+                    logger,
                     customField.id, 
                     customFieldItem.idValue);
 
@@ -74,7 +96,7 @@ app.post(WEBHOOK_PATH, validateHMAC, async (req, res) => {
                     logger.info(`${CUSTOM_FIELD_NAME} resolved`, { projectName });
 
                     //increasing counter
-                    const newNumber = await incrementProjectCounter(projectName);
+                    const newNumber = await incrementProjectCounter(db, logger, projectName);
                     logger.info('Counter incremented', { 
                         projectName, 
                         newNumber });
@@ -83,7 +105,7 @@ app.post(WEBHOOK_PATH, validateHMAC, async (req, res) => {
                     const newTitle = formatCardTitle(projectName, newNumber, card.name);
 
                     //updating card title in Trello
-                    await updateCardTitle(card.id, newTitle);
+                    await updateCardTitle(logger, card.id, newTitle);
 
                     logger.info('Card updated successfully', {
                         cardId: card.id,
@@ -100,6 +122,10 @@ app.post(WEBHOOK_PATH, validateHMAC, async (req, res) => {
                 eventType,
                 boardId 
             });
+
+        return res.status(500).json({ 
+            error: 'Internal server error' 
+        });
         }
     }
 
@@ -108,17 +134,23 @@ app.post(WEBHOOK_PATH, validateHMAC, async (req, res) => {
 });
 
 app.get('/', (req, res) => {
+    const { logger } = req;
+
+    logger.info(`Get request received for the root`);
+
     res.status(200).send('It\'s alive!');
 })
 
 const PORT = process.env.PORT || 3000;
 
 app.get(process.env.APP_HEALTHCHECK_PATH, async(req, res) => {
+    const { logger, db } = req;
     try {
         //check DB
-        await dbGet('SELECT 1');
+        await dbGet(db, 'SELECT 1');
 
-        
+        logger.info(`Get health request received for ${process.env.APP_HEALTHCHECK_PATH}`);
+
         res.status(200).json({
             status: 'healthy',
             timestamp: new Date().toISOString(),
@@ -142,10 +174,16 @@ app.get(process.env.APP_HEALTHCHECK_PATH, async(req, res) => {
 
 app.head(process.env.APP_HEALTHCHECK_PATH, async(req, res) => {
     //easy check
+    const { logger, db } = req;
     try {
-        await dbGet('SELECT 1');
+        logger.info(`Get health request received for ${process.env.APP_HEALTHCHECK_PATH}`);
+
+        await dbGet(db, 'SELECT 1');
         res.status(200).end();
-    } catch {
+    } catch (error) {
+        logger.error('Health check failed:', { 
+            message: error.message
+         });
         res.status(503).end();
     }
 });
@@ -155,21 +193,20 @@ async function  startServer() {
         logger.info('Starting server...');
 
         //checking the envs
-
-        validateEnv();
+        validateEnv(logger);
 
         //Initializing database
         logger.info('Initializing database');
-        await initDatabase();
+        await initDatabase(db, logger);
         logger.info('Database initialized');
 
         //checking board configuration
         const boardCount = getBoardCount();
 
         if (boardCount === 0) {
-            logger.warn('No boards configured in boards.local.js, all webhooks will be ignores');
+            logger.warn('No boards configured in boards.local.js, all webhooks will be ignored');
         } else {
-            logger.info(`${boardCount} boards(s) registerds`);
+            logger.info(`${boardCount} board(s) registered`);
         }
         
         //Start server
@@ -201,10 +238,10 @@ process.on('unhandledRejection', (reason, promise) => {
     });
 });
 
-process.on('uncaughtException', (reason, promise) => {
+process.on('uncaughtException', (error) => {
     logger.error('Uncaught Exception', {
-        reason: reason,
-        promise: promise
+        error: error.message,
+        stack: error.stack
     });
 
     process.exit(1);
@@ -212,7 +249,7 @@ process.on('uncaughtException', (reason, promise) => {
 
 //Graceful shutdown
 process.on('SIGINT', () => {
-    logger.info('SIGNIT received, shutting down gracefully');
+    logger.info('SIGINT received, shutting down gracefully');
     process.exit(0);
 });
 

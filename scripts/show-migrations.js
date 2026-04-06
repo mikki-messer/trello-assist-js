@@ -1,7 +1,12 @@
 import 'dotenv/config';
-import { showMigrationStatus } from '../migrations.js';
+import { showMigrationStatus } from '../src/migrations.js';
+import { createLogger } from '../src/logger.js';
+import { createDatabase } from '../src/db.js';
 
- showMigrationStatus()
+const logger = createLogger();
+const db = createDatabase();
+
+ showMigrationStatus(db, logger)
     .then(() => {
         console.log('Success!');
         process.exit(0);

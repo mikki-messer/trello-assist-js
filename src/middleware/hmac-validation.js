@@ -1,10 +1,10 @@
 import crypto from 'crypto';
-import logger from'../logger.js';
 
-import 'dotenv/config';
-
-function validateHMAC(req, res, next) {
+export function validateHMAC(req, res, next) {
     try {
+
+        const logger = req.logger;
+
         const SIGNATURE_HEADER_FIELD = process.env.TRELLO_SIGNATURE_HEADER_FIELD;
 
         //get the signature from the header
@@ -57,8 +57,4 @@ function validateHMAC(req, res, next) {
 
         res.status(500).send('Internal Server Error');
     }
-}
-
-export {
-    validateHMAC
 }

@@ -1,5 +1,4 @@
 import axios from 'axios';
-import 'dotenv/config';
 
 const API_KEY = process.env.TRELLO_API_KEY;
 const TOKEN = process.env.TRELLO_TOKEN;
@@ -10,7 +9,7 @@ const CARDS_URL = process.env.TRELLO_CARDS_URL;
 const customFieldOptionsCache = {};
 
 //fetch customFieldOptions
-async function getCustomFieldOptions(customFieldId) {
+async function getCustomFieldOptions(logger, customFieldId) {
     //return if already cached
     if (customFieldOptionsCache[customFieldId]){
         return customFieldOptionsCache[customFieldId];
@@ -34,18 +33,18 @@ async function getCustomFieldOptions(customFieldId) {
         return optionsMap;
     }
     catch (error) {
-        console.error('Error fetching custom field options:', error.message);
+        logger.error('Error fetching custom field options:', error.message);
         return {};
     }
 }
 
 //getting field value name by idValue
-async function getProjectNameFromIdValue(customFieldId, idValue) {
-    const options = await getCustomFieldOptions(customFieldId);
+async function getProjectNameFromIdValue(logger, customFieldId, idValue) {
+    const options = await getCustomFieldOptions(logger, customFieldId);
     return options[idValue] || null;
 }
 
-async function updateCardTitle(cardId, newTitle) {
+async function updateCardTitle(logger, cardId, newTitle) {
     try {
         const response = await axios.put(
             `${CARDS_URL}${cardId}`,
@@ -59,11 +58,11 @@ async function updateCardTitle(cardId, newTitle) {
             }
         );
 
-        console.log(`Card title updated: ${newTitle}`);
+        logger.info(`Card title updated: ${newTitle}`);
         return response.data;
 
     } catch (error) {
-        console.error(`Error updating card ${cardId} title:`, newTitle);
+        logger.error(`Error updating card ${cardId} title:`, newTitle);
         throw error;
     }
 }

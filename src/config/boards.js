@@ -1,9 +1,9 @@
 let boards = {};
 let configLoaded = false;
-import localConfig from './boards.local.js';
 
 try {
-    boards = localConfig || {};
+    const localConfig = await import('./boards.local.js'); 
+    boards = localConfig.default || {};
     configLoaded = true;
 
     const boardCount = Object.keys(boards).length;
@@ -15,7 +15,7 @@ try {
     }
 
 } catch (error) {
-    if (error.code === 'MODULE_NOT_FOULD') {
+    if (error.code === 'MODULE_NOT_FOUND') {
         console.error(`boards.local.js not found! You can create it from boards.example.js`);
     } else {
         console.error('Error loading boards.local.js:', error.message);

@@ -1,4 +1,3 @@
-import logger from './logger.js';
 import { dbRun, dbGet, dbAll } from './db.js';
 
 /**
@@ -14,10 +13,13 @@ import { dbRun, dbGet, dbAll } from './db.js';
 
 /**
  * Create migrations tracking table
+ * @param {sqlite3.Database} db
+ * @param {winston.Logger} logger
  */
 
-async function createMigrationsTable() {
-    await dbRun(`
+async function createMigrationsTable(db, logger) {
+    await dbRun(
+        db,`
         CREATE TABLE IF NOT EXISTS migrations (
             version INTEGER PRIMARY KEY,
             applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -30,12 +32,14 @@ async function createMigrationsTable() {
 
 /**
  * Get current database version
+ * @param {sqlite3.Database} db
+ * @param {winston.Logger} logger
  * @returns {Promise<number>} Current version (0 if no migrations applied)
  */
 
-async function getCurrentVersion(){
+export async function getCurrentVersion(db, logger){
     try {
-        const result = await dbGet('SELECT MAX(version) as version FROM migrations');
+        const result = await dbGet(db, 'SELECT MAX(version) as version FROM migrations');
         return result?.version || 0;
     } catch {
         // Table doesn't exist yet
@@ -46,23 +50,28 @@ async function getCurrentVersion(){
 
 /**
  * Check if migration was already applied
- * @param {number} version - Migration version
+ * @param {sqlite3.Database} db
+ * @param {winston.Logger} logger
+ * @param {number} version
  * @returns {Promise<boolean>}
  */
 
-async function isMigrationApplied(version) {
-    const currentVersion = await getCurrentVersion();
+
+async function isMigrationApplied(db, logger, version) {
+    const currentVersion = await getCurrentVersion(db, logger);
     return currentVersion >= version;    
 }
 
 /**
- * Record migration to database2
- * @param {number} version - Migration version
- * @param {string} description - Migration description
+ * Record migration to database
+ * @param {sqlite3.Database} db
+ * @param {number} version
+ * @param {string} description
  */
 
-async function recordMigration(version, description) {
+async function recordMigration(db, version, description) {
     await dbRun(
+        db,
         'INSERT INTO migrations (version, description) VALUES (?, ?)',
         [version, description]
     );
@@ -70,14 +79,16 @@ async function recordMigration(version, description) {
 
 /**
  * Apply a single migration
- * @param {number} version - Migration version
- * @param {string} description - Migration description
- * @param {Function} upFunction - Function to execute migraton
+ * @param {sqlite3.Database} db
+ * @param {winston.Logger} logger
+ * @param {number} version
+ * @param {string} description
+ * @param {Function} upFunction
  */
 
-async function applyMigration(version, description, upFunction) {
+async function applyMigration(db, logger, version, description, upFunction) {
     //checking if already applied
-    if (await isMigrationApplied(version)) {
+    if (await isMigrationApplied(db, logger, version)) {
         logger.debug(`Migration ${version} is already applied: ${description}`);
         return;
     }
@@ -86,10 +97,10 @@ async function applyMigration(version, description, upFunction) {
 
     try {
         //execute migration
-        await upFunction();
+        await upFunction(db, logger);
 
         //record to the migrations table
-        await recordMigration(version, description);
+        await recordMigration(db, version, description);
 
         logger.info(`Migration ${version} applied successfully`);
     } catch (error) {
@@ -103,12 +114,18 @@ async function applyMigration(version, description, upFunction) {
     }
 }
 
+// ============================================
+// Migrations
+// ============================================
+
 /**
  * Migration 1: Create initial projects table
+ * @param {sqlite3.Database} db
+ * @param {winston.Logger} logger
  */
 
-async function migration0001_createProjectsTable() {
-    await dbRun(`
+async function migration0001_createProjectsTable(db, logger) {
+    await dbRun(db, `
             CREATE TABLE IF NOT EXISTS projects (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 project_name TEXT UNIQUE NOT NULL,
@@ -121,11 +138,13 @@ async function migration0001_createProjectsTable() {
 
 /**
  * Migration 2: Add created_at timestamp to projects
+ * @param {sqlite3.Database} db
+ * @param {winston.Logger} logger
  */
 
-async function migration002_addCreatedAt() {
+async function migration0002_addCreatedAt(db, logger) {
     // Check if column already exists
-    const tableInfo = await dbAll ('PRAGMA table_info(projects)');
+    const tableInfo = await dbAll (db, 'PRAGMA table_info(projects)');
     const hasCreatedAt = tableInfo.some(col => col.name === 'created_at');
 
     if (hasCreatedAt) {
@@ -133,13 +152,13 @@ async function migration002_addCreatedAt() {
         return;
     }
 
-    await dbRun('BEGIN TRANSACTION');
+    await dbRun(db, 'BEGIN TRANSACTION');
 
     try {
         //recreating the table
         logger.info('Creating new table with created_at column');
 
-        await dbRun(`
+        await dbRun(db, `
                 CREATE TABLE projects_new (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     project_name TEXT UNIQUE NOT NULL,
@@ -150,27 +169,27 @@ async function migration002_addCreatedAt() {
 
         logger.info('Copying data from old table to new table');
 
-        await dbRun(`
+        await dbRun(db, `
                 INSERT INTO projects_new (id, project_name, last_number)
                 SELECT id, project_name, last_number
                 FROM projects
             `);
 
         logger.info('Dropping the old table');
-        await dbRun('DROP TABLE projects');
+        await dbRun(db, 'DROP TABLE projects');
 
         logger.info('Renaming new table to projects');
 
-        await dbRun('ALTER TABLE projects_new RENAME TO projects');
+        await dbRun(db, 'ALTER TABLE projects_new RENAME TO projects');
 
         //commit transaction
-        dbRun('COMMIT');
+        await dbRun(db, 'COMMIT');
 
         logger.info('Migration 2 completed: created_at column added successfully');
     } catch (error) {
         //rollback transaction
         logger.error('rollback transaction');
-        await dbRun('ROLLBACK');
+        await dbRun(db, 'ROLLBACK');
         throw error;
     }
 }
@@ -179,19 +198,26 @@ async function migration002_addCreatedAt() {
  * Main migration runner
  */
 
-/** Run all pending migrations */
+/**
+ * Run all pending migrations
+ * @param {sqlite3.Database} db
+ * @param {winston.Logger} logger
+ * @returns {Promise<number>} New version
+ */
 
-async function runMigrations() {
+export async function runMigrations(db, logger) {
     logger.info('Starting database migrations...');
 
     try {
-        await createMigrationsTable();
+        await createMigrationsTable(db, logger);
 
-        const currentVersion = await getCurrentVersion();
+        const currentVersion = await getCurrentVersion(db, logger);
         logger.info(`Current dbVersion: ${currentVersion}`);
 
         //apply migrations in order
         await applyMigration(
+            db,
+            logger,
             1,
             'Create initial projects table',
             migration0001_createProjectsTable
@@ -199,12 +225,14 @@ async function runMigrations() {
 
         //future migrations to be added here
         await applyMigration(
+            db,
+            logger,
             2,
             'Add the CreatedAt field for projects',
-            migration002_addCreatedAt
+            migration0002_addCreatedAt
         );
 
-        const newVersion = await getCurrentVersion();
+        const newVersion = await getCurrentVersion(db, logger);
 
         if (newVersion > currentVersion) {
             logger.info(`Database migrated from version ${currentVersion} to ${newVersion}`);
@@ -224,18 +252,20 @@ async function runMigrations() {
 
 /**
  * Get migration history
- * @returns {Promise<Array>} List of applied migrations
+ * @param {sqlite3.Database} db
+ * @param {winston.Logger} logger
+ * @returns {Promise<Array>}
  */
 
-async function getMigrationHistory() {
+export async function getMigrationHistory(db, logger) {
     try {
         const migrations = await dbAll(
+            db,
             'SELECT version, description, applied_at FROM migrations ORDER BY version'
         );
 
         return migrations || [];
-    } catch (error) {
-        
+    } catch (error) {  
         if (error.message && error.message.includes('no such table')) {
             logger.debug('Migrations table does not exist yet (first run)');
             return [];
@@ -247,13 +277,15 @@ async function getMigrationHistory() {
 }
 
 /**
- * Display migration status
+ * Display migration status (for CLI scripts)
+ * @param {sqlite3.Database} db
+ * @param {winston.Logger} logger
  */
 
-async function  showMigrationStatus() {
+export async function  showMigrationStatus(db, logger) {
     try {
-        const currentVersion = await getCurrentVersion();
-        const history = await getMigrationHistory();
+        const currentVersion = await getCurrentVersion(db, logger);
+        const history = await getMigrationHistory(db, logger);
 
         console.log(`Current version: ${currentVersion}`);
         console.log(`\nMigration History:\n`);
@@ -273,10 +305,3 @@ async function  showMigrationStatus() {
             throw error;
         }
 }
-
-export {
-    runMigrations,
-    getCurrentVersion,
-    getMigrationHistory,
-    showMigrationStatus
-};
