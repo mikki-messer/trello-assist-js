@@ -1,10 +1,10 @@
 import crypto from 'crypto';
 
 export function validateHMAC(req, res, next) {
+
+    const logger = req.logger;    
+
     try {
-
-        const logger = req.logger;
-
         const SIGNATURE_HEADER_FIELD = process.env.TRELLO_SIGNATURE_HEADER_FIELD;
 
         //get the signature from the header
