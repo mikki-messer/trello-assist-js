@@ -63,11 +63,28 @@ async function  startServer() {
         }
         
         //Start server
-        app.listen(PORT, () => {
+        const server = app.listen(PORT, () => {
             logger.info('Server launched', {
                 port: PORT,
                 environment: process.env.NODE_ENV,
                 boards_registered: boardCount
+            });
+        });
+
+        //Graceful shutdown
+        process.on('SIGINT', () => {
+            logger.info('SIGINT received, shutting down gracefully');
+            server.close(() => {
+                logger.info('Server closed, exiting');
+                process.exit(0);
+            });
+        });
+
+        process.on('SIGTERM', () => {
+            logger.info('SIGTERM received, shutting down gracefully');
+            server.close(() => {
+                logger.info('Server closed, exiting');
+                process.exit(0);
             });
         });
     }
@@ -99,17 +116,6 @@ process.on('uncaughtException', (error) => {
 
     process.exit(1);
 });
-
-//Graceful shutdown
-process.on('SIGINT', () => {
-    logger.info('SIGINT received, shutting down gracefully');
-    process.exit(0);
-});
-
-process.on('SIGTERM', () => {
-    logger.info('SIGTERM received, shutting down gracefully');
-    process.exit(0);
-})
 
 //Starting the application
 startServer();
