@@ -1,10 +1,8 @@
 let boards = {};
-let configLoaded = false;
 
 try {
     const localConfig = await import('./boards.local.js'); 
     boards = localConfig.default || {};
-    configLoaded = true;
 
     const boardCount = Object.keys(boards).length;
 
@@ -20,7 +18,6 @@ try {
     } else {
         console.error('Error loading boards.local.js:', error.message);
     }
-    configLoaded = false;
 }
 
 //checking if the board is registered
@@ -38,48 +35,14 @@ function getAllBoards(){
     return Object.keys(boards);
 }
 
-//get all boards with descriptions
-function getAllBoardsWithDescriptions() {
-    return Object.entries(boards).map(([id, description]) => ({
-        id,
-        description
-    }));
-}
-
 function getBoardCount(){
     return Object.keys(boards).length;
 }
 
-function isConfigLoaded() {
-    return configLoaded;
-}
-
-//add board (for future)
-function addBoard(boardId, description){
-    boards[boardId] = description;
-    console.log(`Board ${boardId} ${description} added successfully`);
-}
-
-//remove board (for future)
-function removeBoard(boardId){
-    if (boards[boardId]) {
-        delete boards[boardId];
-        console.log(`Board ${boardId} removed`);
-        return true;
-    }
-    return false;
-}
-
 export {
-    boards,
     isBoardRegistered,
     getBoardDescription,
     getAllBoards,
-    getAllBoardsWithDescriptions,
-    isConfigLoaded,
-    getBoardCount,
-    addBoard,
-    removeBoard
+    getBoardCount
 }
-
 
