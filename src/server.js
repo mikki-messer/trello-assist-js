@@ -11,12 +11,12 @@ import { getBoardCount } from './config/boards.js';
 import { validateEnv } from './utils/validate-env.js';
 import { contextMiddleware } from './middleware/context.js';
 
-import { handleWebhookHead } from './handlers/webhookHead.js';
-import { handleWebhookGet } from './handlers/webhookGet.js';
-import { handleWebhookPost } from './handlers/webhookPost.js';
-import { handleHealthGet } from './handlers/healthGet.js';
-import { handleHealthHead } from './handlers/healthHead.js';
-import { handleRootGet } from './handlers/rootGet.js';
+import { handleWebhookHead } from './handlers/webhook-head.js';
+import { handleWebhookGet } from './handlers/webhook-get.js';
+import { handleWebhookPost } from './handlers/webhook-post.js';
+import { handleHealthGet } from './handlers/health-get.js';
+import { handleHealthHead } from './handlers/health-head.js';
+import { handleRootGet } from './handlers/root-get.js';
 
 const WEBHOOK_PATH = process.env.APP_WEBHOOK_PATH;
 const HEALTHCHECK_PATH = process.env.APP_HEALTHCHECK_PATH;
