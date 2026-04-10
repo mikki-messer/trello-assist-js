@@ -85,17 +85,9 @@ export function dbAll (db, sql, params = []) {
  * @param {winston.Logger} logger - Logger instance
  */
 export async function initDatabase(db, logger) {
-    try {
         logger.info('DB initialization...');
         await runMigrations(db, logger);
         logger.info('DB initialized successfully');
-    } catch (error) {
-        logger.error('DB initialization failed', {
-            error: error.message,
-            stack: error.stack
-        });
-        throw error;
-    }
 }
 
 /**
@@ -106,7 +98,6 @@ export async function initDatabase(db, logger) {
  * @returns {Promise<{id: number, project_name: string, last_number: number}>}
  */
 export async function getOrCreateProject(db, logger, projectName) {
-    try {
         //fetching existing project
         let project = await dbGet(
             db,
@@ -131,13 +122,6 @@ export async function getOrCreateProject(db, logger, projectName) {
         }
 
         return project;
-    } catch (error) {
-        logger.error('getOrCreateProject failed:', {
-            error: error.message,
-            projectName
-        })
-        throw error;
-    }
 }
 
 /**
@@ -148,7 +132,6 @@ export async function getOrCreateProject(db, logger, projectName) {
  * @returns {Promise<number>} New counter value
  */
 export async function incrementProjectCounter(db, logger, projectName) {
-    try {
         //making sure the project exists in the DB
         await getOrCreateProject(db, logger, projectName);
 
@@ -163,11 +146,4 @@ export async function incrementProjectCounter(db, logger, projectName) {
         const project = await getOrCreateProject(db, logger, projectName);
 
         return project.last_number;
-    } catch (error) {
-        logger.error('incrementProjectCounter failed:', {
-            message: error.message,
-            projectName
-        });
-        throw error;
-    } 
 }
