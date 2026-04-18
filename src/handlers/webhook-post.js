@@ -48,7 +48,6 @@ export async function handleWebhookPost(req, res) {
                 });
 
                 const projectName = await getProjectNameFromIdValue(
-                    logger,
                     customField.id, 
                     customFieldItem.idValue);
 

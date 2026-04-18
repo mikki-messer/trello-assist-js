@@ -9,62 +9,50 @@ const CARDS_URL = process.env.TRELLO_CARDS_URL;
 const customFieldOptionsCache = {};
 
 //fetch customFieldOptions
-async function getCustomFieldOptions(logger, customFieldId) {
+async function getCustomFieldOptions(customFieldId) {
     //return if already cached
     if (customFieldOptionsCache[customFieldId]){
         return customFieldOptionsCache[customFieldId];
     }
-    
-    try {
-        const response = await axios.get(
-            CUSTOM_FIELDS_URL.concat(customFieldId),
-            { params: { key: API_KEY, token: TOKEN } }
-        );
 
-        //creating mapping id -> text
-        const optionsMap = {};
-        response.data.options.forEach(option => {
-            optionsMap[option.id] = option.value.text;
-        });
+    const response = await axios.get(
+        CUSTOM_FIELDS_URL.concat(customFieldId),
+        { params: { key: API_KEY, token: TOKEN } }
+    );
 
-        //saving to cache
-        customFieldOptionsCache[customFieldId] = optionsMap;
+    //creating mapping id -> text
+    const optionsMap = {};
+    response.data.options.forEach(option => {
+        optionsMap[option.id] = option.value.text;
+    });
 
-        return optionsMap;
-    }
-    catch (error) {
-        logger.error('Error fetching custom field options:', error.message);
-        return {};
-    }
+    //saving to cache
+    customFieldOptionsCache[customFieldId] = optionsMap;
+
+    return optionsMap;
 }
 
 //getting field value name by idValue
-async function getProjectNameFromIdValue(logger, customFieldId, idValue) {
-    const options = await getCustomFieldOptions(logger, customFieldId);
+async function getProjectNameFromIdValue(customFieldId, idValue) {
+    const options = await getCustomFieldOptions(customFieldId);
     return options[idValue] || null;
 }
 
 async function updateCardTitle(logger, cardId, newTitle) {
-    try {
-        const response = await axios.put(
-            `${CARDS_URL}${cardId}`,
-            null,
-            {
-                params: {
-                    key: API_KEY,
-                    token: TOKEN,
-                    name: newTitle
-                }
+    const response = await axios.put(
+        `${CARDS_URL}${cardId}`,
+        null,
+        {
+            params: {
+                key: API_KEY,
+                token: TOKEN,
+                name: newTitle
             }
-        );
+        }
+    );
 
-        logger.info(`Card title updated: ${newTitle}`);
-        return response.data;
-
-    } catch (error) {
-        logger.error(`Error updating card ${cardId} title:`, newTitle);
-        throw error;
-    }
+    logger.info(`Card title updated: ${newTitle}`);
+    return response.data;
 }
 export {
     getProjectNameFromIdValue,

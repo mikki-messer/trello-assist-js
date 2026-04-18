@@ -42,7 +42,7 @@ export async function getCurrentVersion(db, logger){
         const result = await dbGet(db, 'SELECT MAX(version) as version FROM migrations');
         return result?.version || 0;
     } catch {
-        // Table doesn't exist yet
+        // Table doesn't exist yet — this is a valid state on the first run
         logger.info('Table does not exist yet');
         return 0;
     }
@@ -95,23 +95,13 @@ async function applyMigration(db, logger, version, description, upFunction) {
 
     logger.info(`Applying migration ${version}: ${description}`);
 
-    try {
-        //execute migration
-        await upFunction(db, logger);
+    //execute migration
+    await upFunction(db, logger);
 
-        //record to the migrations table
-        await recordMigration(db, version, description);
+    //record to the migrations table
+    await recordMigration(db, version, description);
 
-        logger.info(`Migration ${version} applied successfully`);
-    } catch (error) {
-        logger.error(`Migration ${version} failed`, {
-            error: error.message,
-            stack: error.stack
-        });
-        throw new Error(`Migration ${version} failed ${error.message}`, {
-            cause: error
-        });
-    }
+    logger.info(`Migration ${version} applied successfully`);
 }
 
 // ============================================
@@ -188,7 +178,7 @@ async function migration0002_addCreatedAt(db, logger) {
         logger.info('Migration 2 completed: created_at column added successfully');
     } catch (error) {
         //rollback transaction
-        logger.error('rollback transaction');
+        logger.error('Migration 2 failed, rolling back', { error: error.message });
         await dbRun(db, 'ROLLBACK');
         throw error;
     }
@@ -208,46 +198,38 @@ async function migration0002_addCreatedAt(db, logger) {
 export async function runMigrations(db, logger) {
     logger.info('Starting database migrations...');
 
-    try {
-        await createMigrationsTable(db, logger);
+    await createMigrationsTable(db, logger);
 
-        const currentVersion = await getCurrentVersion(db, logger);
-        logger.info(`Current dbVersion: ${currentVersion}`);
+    const currentVersion = await getCurrentVersion(db, logger);
+    logger.info(`Current dbVersion: ${currentVersion}`);
 
-        //apply migrations in order
-        await applyMigration(
-            db,
-            logger,
-            1,
-            'Create initial projects table',
-            migration0001_createProjectsTable
-        );
+    //apply migrations in order
+    await applyMigration(
+        db,
+        logger,
+        1,
+        'Create initial projects table',
+        migration0001_createProjectsTable
+    );
 
-        //future migrations to be added here
-        await applyMigration(
-            db,
-            logger,
-            2,
-            'Add the CreatedAt field for projects',
-            migration0002_addCreatedAt
-        );
+    //future migrations to be added here
+    await applyMigration(
+        db,
+        logger,
+        2,
+        'Add the CreatedAt field for projects',
+        migration0002_addCreatedAt
+    );
 
-        const newVersion = await getCurrentVersion(db, logger);
+    const newVersion = await getCurrentVersion(db, logger);
 
-        if (newVersion > currentVersion) {
-            logger.info(`Database migrated from version ${currentVersion} to ${newVersion}`);
-        } else {
-            logger.info('Database is up-to-date');
-        }
-
-        return newVersion;
-    } catch (error) {
-        logger.error('Migration failed', {
-            error: error.message,
-            stack: error.stack
-        });
-        throw error;
+    if (newVersion > currentVersion) {
+        logger.info(`Database migrated from version ${currentVersion} to ${newVersion}`);
+    } else {
+        logger.info('Database is up-to-date');
     }
+
+    return newVersion;
 }
 
 /**
@@ -283,25 +265,17 @@ export async function getMigrationHistory(db, logger) {
  */
 
 export async function  showMigrationStatus(db, logger) {
-    try {
-        const currentVersion = await getCurrentVersion(db, logger);
-        const history = await getMigrationHistory(db, logger);
+    const currentVersion = await getCurrentVersion(db, logger);
+    const history = await getMigrationHistory(db, logger);
 
-        console.log(`Current version: ${currentVersion}`);
-        console.log(`\nMigration History:\n`);
+    console.log(`Current version: ${currentVersion}`);
+    console.log(`\nMigration History:\n`);
 
-        if (history.length === 0) {
-            console.log('No migrations applied yet');
-        } else {
-            history.forEach(m => {
-                console.log(`[${m.version} ${m.description}] applied at: ${m.applied_at}`);
-            })
-        }
-    } catch (error) {
-
-            console.error('Error showing migration status\n');
-            console.error('Error:', error.message);
-            console.error(`\nStack trace: ${error.stack}`);
-            throw error;
-        }
+    if (history.length === 0) {
+        console.log('No migrations applied yet');
+    } else {
+        history.forEach(m => {
+            console.log(`[${m.version} ${m.description}] applied at: ${m.applied_at}`);
+        })
+    }
 }
