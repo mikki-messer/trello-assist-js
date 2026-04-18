@@ -49,7 +49,7 @@ Result: "PRJ-25 Fix login bug"
 git clone <your-repo-url>
 cd trelloassist
 cp .env.example .env         # Edit with your credentials
-cp config/boards.example.js config/boards.local.js  # Add your board IDs
+cp src/config/boards.example.js src/config/boards.local.js  # Add your board IDs
 docker compose up -d
 ```
 
@@ -60,8 +60,8 @@ git clone <your-repo-url>
 cd trelloassist
 npm install
 cp .env.example .env         # Edit with your credentials
-cp config/boards.example.js config/boards.local.js  # Add your board IDs
-node server.js
+cp src/config/boards.example.js src/config/boards.local.js  # Add your board IDs
+npm start
 ```
 
 After starting the server, register webhooks for your boards:
@@ -175,7 +175,7 @@ See `.env.example` for the complete list of variables.
 
 ### Board Configuration
 
-Boards are configured in `config/boards.local.js` as an object with board IDs as keys:
+Boards are configured in `src/config/boards.local.js` as an object with board IDs as keys:
 
 ```javascript
 const boards = {
@@ -183,7 +183,7 @@ const boards = {
     '6a9c4d3b2e5f7g8h9i0j1k2l': 'Marketing Projects',
 };
 
-module.exports = { boards };
+export default boards;
 ```
 
 To find your board IDs:
@@ -214,7 +214,7 @@ node scripts/list-boards.js
 
 ### Registering Webhooks
 
-Register webhooks for all boards defined in `config/boards.local.js`:
+Register webhooks for all boards defined in `src/config/boards.local.js`:
 
 ```bash
 npm run webhooks:register
@@ -260,8 +260,8 @@ Find webhook IDs with `npm run webhooks:list`.
 ```bash
 npm install
 cp .env.example .env
-cp config/boards.example.js config/boards.local.js
-node server.js
+cp src/config/boards.example.js src/config/boards.local.js
+npm start
 ```
 
 ### Using ngrok for Webhook Testing
@@ -299,13 +299,13 @@ This runs `scripts/backup.sh` to create a backup in the `backups/` directory.
 
 | Script | Command | Description |
 |--------|---------|-------------|
-| `npm start` | `node server.js` | Start the server |
+| `npm start` | `node src/server.js` | Start the server |
 | `npm run lint` | `eslint .` | Run ESLint |
 | `npm run lint:fix` | `eslint . --fix` | Auto-fix lint issues |
 | `npm run backup` | `./scripts/backup.sh` | Backup the database |
 | `npm run webhooks:list` | `node scripts/list-webhooks.js` | List all webhooks |
 | `npm run webhooks:delete` | `node scripts/delete-all-webhooks.js` | Delete all webhooks |
-| `npm run webhooks:register` | `node scripts/register-webhooks-from-boards-file.js` | Register webhooks from `boards.local.js` |
+| `npm run webhooks:register` | `node scripts/register-webhooks-from-boards-file.js` | Register webhooks from `src/config/boards.local.js` |
 
 ### Utility Scripts in `scripts/`
 
@@ -326,12 +326,29 @@ This runs `scripts/backup.sh` to create a backup in the `backups/` directory.
 
 ```
 trelloassist/
-├── config/
-│   ├── boards.js                  # Board configuration loader
-│   ├── boards.example.js          # Template (in Git)
-│   └── boards.local.js            # Your boards (NOT in Git)
-├── middleware/
-│   └── hmac-validation.js         # HMAC signature validation
+├── src/
+│   ├── config/
+│   │   ├── boards.js              # Board configuration loader
+│   │   ├── boards.example.js      # Template (in Git)
+│   │   └── boards.local.js        # Your boards (NOT in Git)
+│   ├── handlers/
+│   │   ├── health-get.js          # GET /health — full health status
+│   │   ├── health-head.js         # HEAD /health — lightweight health check
+│   │   ├── root-get.js            # GET / — root endpoint
+│   │   ├── webhook-get.js         # GET /webhook — status check
+│   │   ├── webhook-head.js        # HEAD /webhook — webhook verification
+│   │   └── webhook-post.js        # POST /webhook — main webhook handler
+│   ├── middleware/
+│   │   ├── context.js             # Attaches logger and db to request
+│   │   └── hmac-validation.js     # HMAC signature validation
+│   ├── utils/
+│   │   ├── format.js              # Card title formatting
+│   │   ├── trello-utils.js        # Trello API client functions
+│   │   └── validate-env.js        # Environment variable validation
+│   ├── db.js                      # SQLite database functions
+│   ├── logger.js                  # Winston logger configuration
+│   ├── migrations.js              # Database migration runner
+│   └── server.js                  # Express server initialization and routing
 ├── scripts/
 │   ├── backup.sh                  # Database backup script
 │   ├── delete-all-webhooks.js     # Delete all webhooks
@@ -341,20 +358,12 @@ trelloassist/
 │   ├── register-webhook.js        # Register a single webhook
 │   ├── register-webhooks-from-boards-file.js  # Bulk webhook registration
 │   └── show-migrations.js         # Show DB migrations
-├── utils/
-│   ├── format.js                  # Formatting utilities
-│   ├── trello-utils.js            # Trello API client functions
-│   └── validate-env.js            # Environment variable validation
 ├── data/                          # Database directory (Docker)
 ├── backups/                       # Database backups
-├── db.js                          # SQLite database functions
-├── logger.js                      # Winston logger configuration
-├── migrations.js                  # Database migration runner
-├── server.js                      # Express server & webhook handler
 ├── .env                           # Environment variables (NOT in Git)
 ├── .env.example                   # Environment template (in Git)
 ├── docker-compose.yml             # Docker Compose configuration
-├── Dockerfile                     # Multi-stage Docker build
+├── Dockerfile                     # Docker build configuration
 └── package.json
 ```
 
@@ -372,13 +381,13 @@ trelloassist/
            ↓
 ┌─────────────────────┐
 │  HMAC Validation    │ ← Verify signature
-│  (middleware)       │
+│  (middleware/)      │
 └──────────┬──────────┘
            │
            ↓
 ┌─────────────────────┐
-│  Board Check        │ ← boards.local.js
-│  (server.js)        │
+│  Webhook Handler    │ ← handlers/webhook-post.js
+│  + Board Check      │ ← config/boards.local.js
 └──────────┬──────────┘
            │
            ↓
@@ -506,7 +515,7 @@ Set via `LOG_LEVEL` environment variable: `error`, `warn`, `info` (default), `de
 ### Cards Not Updating
 
 Check logs for:
-- `"Webhook from unregistered board"` — Add the board to `config/boards.local.js`
+- `"Webhook from unregistered board"` — Add the board to `src/config/boards.local.js`
 - `"Could not resolve project name"` — Check custom field configuration in Trello
 - Enable debug logging: set `LOG_LEVEL=debug` in `.env` and restart
 
@@ -545,11 +554,11 @@ All incoming webhooks are validated using HMAC-SHA1:
 
 ### Board Registration
 
-Only boards listed in `config/boards.local.js` are processed. Webhooks from unregistered boards are logged and ignored.
+Only boards listed in `src/config/boards.local.js` are processed. Webhooks from unregistered boards are logged and ignored.
 
 ### Sensitive Data
 
-API keys, tokens, and secrets are stored in `.env` (excluded from Git). Board IDs are stored in `boards.local.js` (also excluded from Git).
+API keys, tokens, and secrets are stored in `.env` (excluded from Git). Board IDs are stored in `src/config/boards.local.js` (also excluded from Git).
 
 ---
 

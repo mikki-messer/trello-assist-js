@@ -1,6 +1,6 @@
 import { dbGet } from '../db.js';
 
-export async function handleHealthHead(res, req) {
+export async function handleHealthHead(req, res) {
         //easy check
         const { logger, db } = req;
         try {

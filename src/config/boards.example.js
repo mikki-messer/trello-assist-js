@@ -23,6 +23,4 @@ const boards = {
     
 };
 
-export { 
-    boards 
-};
+export default boards;

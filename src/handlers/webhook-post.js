@@ -71,6 +71,8 @@ export async function handleWebhookPost(req, res) {
                         oldTitle: card.name,
                         newTitle
                     });
+                } else {
+                    logger.info(`${CUSTOM_FIELD_NAME} Could not resolve project name`, { projectName })
                 }
                 
             }
